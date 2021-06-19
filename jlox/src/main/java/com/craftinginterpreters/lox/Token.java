@@ -90,29 +90,7 @@ public class Token {
    * @return
    */
   public boolean equals(final Token other) {
-    // All tokens must have a type and a lexeme
-    if (!type.equals(other.getType())) {
-      return false;
-    }
-    if (!lexeme.equals(other.getLexeme())) {
-      return false;
-    }
-
-    // Compare literals (gross logic)
-    if (literal == null) {
-      if (other.getLiteral() != null) {
-        return false;
-      }
-    } else {
-      if (other.getLiteral() == null) {
-        return false;
-      }
-      if (literal.equals(other.getLiteral())) {
-        return false;
-      }
-    }
-
-    // Finally, compare line numbers
-    return line == other.getLine();
+    // NOTE: Ignoring object comparison for literals
+    return type.equals(other.getType()) && lexeme.equals(other.getLexeme()) && (line == other.getLine());
   }
 }
