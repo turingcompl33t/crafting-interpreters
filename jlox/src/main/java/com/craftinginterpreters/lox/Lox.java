@@ -46,6 +46,10 @@ public class Lox {
 
   }
 
+  // --------------------------------------------------------------------------
+  // Interpreter Entry Point
+  // --------------------------------------------------------------------------
+
   /**
    * Lox interpreter entry point.
    * @param args
@@ -62,6 +66,10 @@ public class Lox {
       runPrompt();
     }
   }
+
+  // --------------------------------------------------------------------------
+  // Top-Level Interpreter Execution
+  // --------------------------------------------------------------------------
 
   /**
    * Run the Lox source file at the specified path on the interpreter.
@@ -99,19 +107,54 @@ public class Lox {
    * @param source The input program source
    */
   private static void run(final String source) {
+    // Scan the input source
     Scanner scanner = new Scanner(source);
     List<Token> tokens = scanner.scanTokens();
 
-    // For now just print tokens
-    for (final Token token : tokens) {
-      System.out.println(token);
+    // Parse the scanned tokens to the Lox AST
+    Parser parser = new Parser(tokens);
+    final Expr expression = parser.parse();
+
+    if (hadError) {
+      // Syntax error during parsing
+      return;
     }
+
+    System.out.println(new AstPrinter().print(expression));
   }
 
+  // --------------------------------------------------------------------------
+  // Error Reporting
+  // --------------------------------------------------------------------------
+
+  /**
+   * Report an error.
+   * @param line The line number at which the error occurred
+   * @param message The error message
+   */
   public static void error(final int line, final String message) {
     report(line, "", message);
   }
 
+  /**
+   * Report a parse error.
+   * @param token The token at which the error occurred
+   * @param message The error message to display
+   */
+  public static void error(final Token token, final String message) {
+    if (token.getType() == TokenType.EOF) {
+      report(token.getLine(), " at end", message);
+    } else {
+      report(token.getLine(), " at '" + token.getLexeme() + "'", message);
+    }
+  }
+
+  /**
+   * Report an error.
+   * @param line The line number at which the error occurred
+   * @param where The error location
+   * @param message The error message
+   */
   private static void report(final int line, final String where, final String message) {
     StringBuilder builder = new StringBuilder();
     builder.append("[line ");
