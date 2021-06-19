@@ -19,7 +19,7 @@ public class ExitCodes {
   /**
    * The command was used incorrectly.
    */
-  public static final int EX_ERROR = 64;
+  public static final int EX_USAGE = 64;
 
   /**
    * The input data was incorrect in some way.

@@ -1,3 +1,7 @@
+/**
+ * Lox.java
+ */
+
 package com.craftinginterpreters.lox;
 
 import java.io.BufferedReader;
@@ -8,12 +12,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
-import ExitCodes;
-
 /**
  * A dummy logger class that just writes to standard output.
  */
-private class Logger {
+class Logger {
   /**
    * Log an error message.
    * @param message
@@ -52,7 +54,7 @@ public class Lox {
   public static void main(String[] args) throws IOException {
     if (args.length > 1) {
       Logger.error("Usage: jlox [script]");
-      System.exit(ExitCodes.USAGE_ERROR);
+      System.exit(ExitCodes.EX_USAGE);
     }
     else if (args.length == 1) {
       runFile(args[0]);
@@ -80,7 +82,7 @@ public class Lox {
    */
   public static void runPrompt() throws IOException {
     InputStreamReader input = new InputStreamReader(System.in);
-    BufferReader reader = new BufferedReader(input);
+    BufferedReader reader = new BufferedReader(input);
     for (;;) {
       System.out.print(PROMPT);
       final String program = reader.readLine();
@@ -100,8 +102,9 @@ public class Lox {
     Scanner scanner = new Scanner(source);
     List<Token> tokens = scanner.scanTokens();
 
+    // For now just print tokens
     for (final Token token : tokens) {
-      System.out.println(tokens);
+      System.out.println(token);
     }
   }
 
@@ -117,7 +120,7 @@ public class Lox {
     builder.append(where);
     builder.append(": ");
     builder.append(message);
-    System.err.printlnt(builder.toString());
+    System.err.println(builder.toString());
     hadError = true;
   }
 }
