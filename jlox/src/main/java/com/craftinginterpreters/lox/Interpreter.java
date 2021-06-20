@@ -5,6 +5,7 @@
 package com.craftinginterpreters.lox;
 
 import java.util.List;
+import java.util.ArrayList;
 
 import com.craftinginterpreters.lox.ast.*;
 
@@ -14,9 +15,41 @@ import com.craftinginterpreters.lox.ast.*;
 public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
 
   /**
-   * The global interpreter environment.
+   * The global (top-level) interpreter environment.
    */
-  private Environment environment = new Environment();
+  private final Environment globals = new Environment();
+
+  /**
+   * The current interpreter environment.
+   */
+  private Environment environment = globals;
+
+  /**
+   * Get the global environment for the interpreter.
+   * @return The interpreter global environment
+   */
+  public Environment getGlobals() {
+    return globals;
+  }
+
+  /**
+   * Construct a new Interpreter instance.
+   */
+  public Interpreter() {
+    // Define the clock() native function
+    globals.define("clock", new LoxCallable() {
+      @Override
+      public int arity() { return 0; }
+
+      @Override
+      public Object call(Interpreter interpreter, final List<Object> arguments) {
+        return (double)System.currentTimeMillis() / 1000.0;
+      }
+
+      @Override
+      public String toString() { return "<native fn>"; }
+    });
+  }
 
   /**
    * Interpret a Lox program.
@@ -37,7 +70,7 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
    * @param expression The expression to evaluate
    * @return The runtime value
    */
-  private Object evaluate(final Expr expr) {
+  public Object evaluate(final Expr expr) {
     return expr.accept(this);
   }
 
@@ -45,11 +78,11 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
    * Execute a statement.
    * @param statement The statement to execute
    */
-  private void execute(final Stmt statement) {
+  public void execute(final Stmt statement) {
     statement.accept(this);
   }
 
-  private void executeBlock(final List<Stmt> statements, Environment environment) {
+  public void executeBlock(final List<Stmt> statements, Environment environment) {
     final Environment previous = this.environment;
     try {
       // Execute the block in the provided environment
@@ -75,6 +108,18 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
   @Override
   public Void visitExpressionStmt(final ExpressionStmt stmt) {
     evaluate(stmt.expression);
+    return null;
+  }
+
+  /**
+   * Evaluate a function statement.
+   * @param stmt The statement
+   * @return null
+   */
+  @Override
+  public Void visitFunctionStmt(final FunctionStmt stmt) {
+    final LoxFunction function = new LoxFunction(stmt);
+    environment.define(stmt.name.getLexeme(), function);
     return null;
   }
 
@@ -256,6 +301,39 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
 
     // Unreachable
     return null;
+  }
+
+  /**
+   * Evaluate a function call expression.
+   * @param expr The expression
+   * @return The runtime value
+   */
+  @Override
+  public Object visitCallExpr(final CallExpr expr) {
+    final Object callee = evaluate(expr.callee);
+    List<Object> arguments = new ArrayList<>();
+    for (final Expr argument : expr.arguments) {
+      arguments.add(evaluate(argument));
+    }
+
+    if(!(callee instanceof LoxCallable)) {
+      throw new RuntimeError(expr.paren, "Attempt to call a non-callable object.");
+    }
+
+    LoxCallable function = (LoxCallable)callee;
+
+    // Ensure the number of arguments provided matches the function's arity
+    if (arguments.size() != function.arity()) {
+      StringBuilder builder = new StringBuilder();
+      builder.append("Expected ");
+      builder.append(function.arity());
+      builder.append(" arguments but got ");
+      builder.append(arguments.size());
+      builder.append(".");
+      throw new RuntimeError(expr.paren, builder.toString());
+    }
+
+    return function.call(this, arguments);
   }
 
   /**

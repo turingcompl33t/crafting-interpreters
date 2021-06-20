@@ -17,6 +17,11 @@ public class Parser {
   private static class ParseError extends RuntimeException {}
 
   /**
+   * The maximum number of arguments that may be passed to a Lox function call.
+   */
+  private static final int MAX_CALL_ARGUMENTS = 255;
+
+  /**
    * The collection of scanned tokens.
    */
   private final List<Token> tokens;
@@ -56,6 +61,7 @@ public class Parser {
    */
   private Stmt declaration() {
     try {
+      if (match(TokenType.FUN)) return function("function");
       if (match(TokenType.VAR)) return varDeclaration();
       return statement();
     } catch (ParseError error) {
@@ -194,6 +200,27 @@ public class Parser {
     return new ExpressionStmt(expr);
   }
 
+  private FunctionStmt function(final String kind) {
+    final Token name = consume(TokenType.IDENTIFER, "Expect " + kind + " name.");
+    consume(TokenType.LEFT_PAREN, "Expect '(' after " + kind + "name.");
+    List<Token> parameters = new ArrayList<>();
+    if (!check(TokenType.RIGHT_PAREN)) {
+      do {
+        if (parameters.size() >= MAX_CALL_ARGUMENTS) {
+          error(peek(), "Maximum function call arguments exceeded.");
+        }
+        parameters.add(
+          consume(TokenType.IDENTIFER, "Expect parameter name."));
+      } while (match(TokenType.COMMA));
+    }
+    consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.");
+
+    consume(TokenType.LEFT_BRACE, "Expect '{' before " + kind + " body.");
+    final List<Stmt> body = block();
+    
+    return new FunctionStmt(name, parameters, body);
+  }
+
   // --------------------------------------------------------------------------
   // Expression Productions
   // --------------------------------------------------------------------------
@@ -322,7 +349,43 @@ public class Parser {
       final Expr right = unary();
       return new UnaryExpr(operator, right);
     }
-    return primary();
+    return call();
+  }
+
+  /**
+   * Build the syntax tree for the `call` production.
+   * @return The `call` syntax tree
+   */
+  private Expr call() {
+    Expr expr = primary();
+    while (true) {
+      if (match(TokenType.LEFT_PAREN)) {
+        expr = finishCall(expr);
+      } else {
+        break;
+      }
+    }
+    return expr;
+  }
+
+  /**
+   * Build the syntax tree for the `call` production.
+   * @param callee The callee expression
+   * @return The completed call
+   */
+  private Expr finishCall(final Expr callee) {
+    List<Expr> arguments = new ArrayList<>();
+    if (!check(TokenType.RIGHT_PAREN)) {
+      do {
+        if (arguments.size() >= MAX_CALL_ARGUMENTS) {
+          error(peek(), "Maximum function call arguments exceeded.");
+        }
+        arguments.add(expression());
+      } while (match(TokenType.COMMA));
+    }
+
+    final Token paren = consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.");
+    return new CallExpr(callee, paren, arguments);
   }
 
   private Expr primary() {

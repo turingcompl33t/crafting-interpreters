@@ -1,0 +1,6 @@
+// function.lox
+fun sayHello(first, last) {
+  print "Hello, " + first + " " + last + "!";
+}
+
+sayHello("Ada", "Lovelace");
