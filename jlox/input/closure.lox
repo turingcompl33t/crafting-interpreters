@@ -1,0 +1,15 @@
+// closure.lox
+fun makeCounter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    return i;
+  }
+  return count;
+}
+
+var count = makeCounter();
+
+print count();  // 1
+print count();  // 2
+print count();  // 3

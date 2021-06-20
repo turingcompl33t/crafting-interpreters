@@ -18,11 +18,18 @@ public class LoxFunction implements LoxCallable {
   private final FunctionStmt declaration;
 
   /**
+   * The captured environment.
+   */
+  private final Environment closure;
+
+  /**
    * Construct a new LoxFunction instance.
    * @param declaration The associated declaration
+   * @param closure The captured environment
    */
-  public LoxFunction(final FunctionStmt declaration) {
+  public LoxFunction(final FunctionStmt declaration, final Environment closure) {
     this.declaration = declaration;
+    this.closure = closure;
   }
 
   @Override
@@ -34,14 +41,19 @@ public class LoxFunction implements LoxCallable {
   public Object call(Interpreter interpreter, final List<Object> arguments) {
     // Create a new environment for the function, with the global
     // interpreter environment set as the enclosing environment
-    Environment environment = new Environment(interpreter.getGlobals());
+    Environment environment = new Environment(closure);
     // Define each of the function arguments in the environment
     for (int i = 0; i < declaration.params.size(); ++i) {
       // Bind the value passed to the function to the appropriate name
       environment.define(declaration.params.get(i).getLexeme(), arguments.get(i));
     }
     // Execute the function body on the interpreter
-    interpreter.executeBlock(declaration.body, environment);
+    try {
+      interpreter.executeBlock(declaration.body, environment);
+    } catch (Return returnValue) {
+      return returnValue.value;
+    }
+
     return null;
   }
 

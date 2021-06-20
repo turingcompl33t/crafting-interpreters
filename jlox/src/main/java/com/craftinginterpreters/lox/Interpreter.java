@@ -82,6 +82,11 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     statement.accept(this);
   }
 
+  /**
+   * Execute a block of statements in the given environment.
+   * @param statements The list of statements in the block
+   * @param environment The environment in which to execute
+   */
   public void executeBlock(final List<Stmt> statements, Environment environment) {
     final Environment previous = this.environment;
     try {
@@ -118,7 +123,9 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
    */
   @Override
   public Void visitFunctionStmt(final FunctionStmt stmt) {
-    final LoxFunction function = new LoxFunction(stmt);
+    // When we create the function, we capture the environment
+    // in which it is defined; this allows us to support closures
+    final LoxFunction function = new LoxFunction(stmt, environment);
     environment.define(stmt.name.getLexeme(), function);
     return null;
   }
@@ -162,6 +169,17 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     final Object value = evaluate(stmt.expression);
     System.out.println(stringify(value));
     return null;
+  }
+
+  /**
+   * Evaluate a return statement.
+   * @param stmt The statement
+   * @return null
+   */
+  @Override
+  public Void visitReturnStmt(final ReturnStmt stmt) {
+    final Object value = (stmt.value != null) ? evaluate(stmt.value) : null;
+    throw new Return(value);
   }
 
   /**

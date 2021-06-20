@@ -89,6 +89,7 @@ public class Parser {
   private Stmt statement() {
     if (match(TokenType.IF)) return ifStatement();
     if (match(TokenType.PRINT)) return printStatement();
+    if (match(TokenType.RETURN)) return returnStatement();
     if (match(TokenType.WHILE)) return whileStatement();
     if (match(TokenType.FOR)) return forStatement();
     if (match(TokenType.LEFT_BRACE)) return new BlockStmt(block());
@@ -181,13 +182,24 @@ public class Parser {
   }
 
   /**
-   * Build the syntax tree for the `print statement` production.
-   * @return The `print statement` syntax tree
+   * Build the syntax tree for the `printStatement` production.
+   * @return The `printStatement` syntax tree
    */
   private Stmt printStatement() {
     final Expr value = expression();
     consume(TokenType.SEMICOLON, "Expected ';' after value.");
     return new PrintStmt(value);
+  }
+
+  /**
+   * Build the syntax tree for the `returnStatement` production.
+   * @return The `returnStatement` syntax tree
+   */
+  private Stmt returnStatement() {
+    final Token keyword = previous();
+    final Expr value = !check(TokenType.SEMICOLON) ? expression() : null;
+    consume(TokenType.SEMICOLON, "Expect ';' after return value.");
+    return new ReturnStmt(keyword, value);
   }
 
   /**
