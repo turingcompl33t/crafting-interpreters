@@ -4,12 +4,7 @@
 
 package com.craftinginterpreters.lox;
 
-import com.craftinginterpreters.lox.ast.Expr;
-import com.craftinginterpreters.lox.ast.ExprVisitor;
-import com.craftinginterpreters.lox.ast.BinaryExpr;
-import com.craftinginterpreters.lox.ast.GroupingExpr;
-import com.craftinginterpreters.lox.ast.LiteralExpr;
-import com.craftinginterpreters.lox.ast.UnaryExpr;
+import com.craftinginterpreters.lox.ast.*;
 
 /**
  * The AstPrinter class implements a simple AST printer
@@ -44,6 +39,16 @@ public class AstPrinter implements ExprVisitor<String> {
   @Override
   public String visitUnaryExpr(final UnaryExpr expr) {
     return parenthesize(expr.operator.lexeme, expr.expression);
+  }
+
+  @Override
+  public String visitVariableExpr(final VariableExpr expr) {
+    return expr.name.getLexeme();
+  }
+
+  @Override
+  public String visitAssignExpr(final AssignExpr expr) {
+    return "";
   }
 
   /**

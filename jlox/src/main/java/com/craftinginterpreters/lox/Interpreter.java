@@ -12,12 +12,11 @@ import com.craftinginterpreters.lox.ast.*;
  * The Interpreter class implements a tree-walk interpreter for Lox.
  */
 public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
-  /**
-   * Construct a new Interpreter instance.
-   */
-  Interpreter() {
 
-  }
+  /**
+   * The global interpreter environment.
+   */
+  private Environment environment = new Environment();
 
   /**
    * Interpret a Lox program.
@@ -50,6 +49,20 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     statement.accept(this);
   }
 
+  private void executeBlock(final List<Stmt> statements, Environment environment) {
+    final Environment previous = this.environment;
+    try {
+      // Execute the block in the provided environment
+      this.environment = environment;
+      for (final Stmt statement : statements) {
+        execute(statement);
+      }
+    } finally {
+      // Restore the environment
+      this.environment = previous;
+    }
+  }
+
   // --------------------------------------------------------------------------
   // Statement Visitors
   // --------------------------------------------------------------------------
@@ -77,6 +90,29 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     return null;
   }
 
+  /**
+   * Evaluate a variable declaration statement.
+   * @param stmt The statement
+   * @return null
+   */
+  @Override
+  public Void visitVarStmt(final VarStmt stmt) {
+    final Object value = stmt.initializer != null ? evaluate(stmt.initializer) : null;
+    environment.define(stmt.name.getLexeme(), value);
+    return null;
+  }
+
+  /**
+   * Evaluate a block statement.
+   * @param stmt The statement
+   * @return null
+   */
+  @Override
+  public Void visitBlockStmt(final BlockStmt stmt) {
+    executeBlock(stmt.statements, new Environment(environment));
+    return null;
+  }
+
   // --------------------------------------------------------------------------
   // Expression Visitors
   // --------------------------------------------------------------------------
@@ -101,6 +137,11 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     return evaluate(expr.expression);
   }
 
+  /**
+   * Evaluate a unary expression.
+   * @param expr The expression
+   * @return The runtime value
+   */
   @Override
   public Object visitUnaryExpr(final UnaryExpr expr) {
     final Object right = evaluate(expr.expression);
@@ -116,6 +157,11 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     return null;
   }
 
+  /**
+   * Evaluate a binary expression.
+   * @param expr The expression
+   * @return The runtime value
+   */
   @Override
   public Object visitBinaryExpr(final BinaryExpr expr) {
     final Object left = evaluate(expr.left);
@@ -162,6 +208,32 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     // Unreachable
     return null;
   }
+
+  /**
+   * Evaluate a variable expression.
+   * @param expr The expression
+   * @return The runtime value
+   */
+  @Override
+  public Object visitVariableExpr(final VariableExpr expr) {
+    return environment.get(expr.name);
+  }
+
+  /**
+   * Evaluate an assignment expression.
+   * @param expr The expression
+   * @return The runtime value
+   */
+  @Override
+  public Object visitAssignExpr(final AssignExpr expr) {
+    final Object value = evaluate(expr.value);
+    environment.assign(expr.name, value);
+    return value;
+  }
+
+  // --------------------------------------------------------------------------
+  // TODO
+  // --------------------------------------------------------------------------
 
   /**
    * Determine if a value is "truthy" in Lox.

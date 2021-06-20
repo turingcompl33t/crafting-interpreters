@@ -40,7 +40,7 @@ public class Parser {
   public List<Stmt> parse() {
     List<Stmt> statements = new ArrayList<>();
     while (!isAtEnd()) {
-      statements.add(statement());
+      statements.add(declaration());
     }
     return statements;
   }
@@ -50,12 +50,52 @@ public class Parser {
   // --------------------------------------------------------------------------
 
   /**
+   * Build the syntax tree for the `declaration` production.
+   * @return The `declaration` syntax tree
+   */
+  private Stmt declaration() {
+    try {
+      if (match(TokenType.VAR)) return varDeclaration();
+      return statement();
+    } catch (ParseError error) {
+      synchronize();
+      return null;
+    }
+  }
+
+  /**
+   * Build the syntax tree for the `var declaration` production.
+   * @return The `var declaration` syntax tree
+   */
+  private Stmt varDeclaration() {
+    final Token name = consume(TokenType.IDENTIFER, "Expect a variable name.");
+    // Parse an initializer if we see an '='
+    final Expr initializer = match(TokenType.EQUAL) ? expression() : null;
+    consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+    return new VarStmt(name, initializer);
+  }
+
+  /**
    * Build the syntax tree for the `statement` production.
    * @return The `statement` syntax tree
    */
   private Stmt statement() {
     if (match(TokenType.PRINT)) return printStatement();
+    if (match(TokenType.LEFT_BRACE)) return new BlockStmt(block());
     return expressionStatement();
+  }
+
+  /**
+   * Build the syntax tree for the `block` production.
+   * @return The `block` syntax tree
+   */
+  private List<Stmt> block() {
+    List<Stmt> statements = new ArrayList<>();
+    while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
+      statements.add(declaration());
+    }
+    consume(TokenType.RIGHT_BRACE, "Expect '}' after block.");
+    return statements;
   }
 
   /**
@@ -87,8 +127,31 @@ public class Parser {
    * @return The `expression` syntax tree
    */
   private Expr expression() {
-    return equality();
+    return assignment();
   }
+
+  /**
+   * Build the syntax tree for the `assignment` production.
+   * @return The `assignment` syntax tree
+   */
+  private Expr assignment() {
+    Expr expr = equality();
+    
+    if (match(TokenType.EQUAL)) {
+      final Token equals = previous();
+      // Recursively call assignment() to evaluate the right-hand side
+      final Expr value = assignment();
+      // Every valid assignment target is ALSO a valid normal expression
+      if (expr instanceof VariableExpr) {
+        final Token name = ((VariableExpr)expr).name;
+        return new AssignExpr(name, value);
+      }
+
+      error(equals, "Invalid target for assignment.");
+    }
+
+    return expr;
+  } 
 
   /**
    * Build the syntax tree for the `equality` production.
@@ -166,6 +229,10 @@ public class Parser {
 
     if (match(TokenType.NUMBER, TokenType.STRING)) {
       return new LiteralExpr(previous().getLiteral());
+    }
+
+    if (match(TokenType.IDENTIFER)) {
+      return new VariableExpr(previous());
     }
 
     if (match(TokenType.LEFT_PAREN)) {
