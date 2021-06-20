@@ -2,7 +2,7 @@
  * Expr.java
  */
 
-package com.craftinginterpreters.lox;
+package com.craftinginterpreters.lox.ast;
 
 /**
  * The base class for all AST expressions.
@@ -14,5 +14,5 @@ public abstract class Expr {
    * @param visitor The visitor instance
    * @return Visitor-dependent value
    */
-  abstract <R> R accept(ExprVisitor<R> visitor);
+  public abstract <R> R accept(ExprVisitor<R> visitor);
 }

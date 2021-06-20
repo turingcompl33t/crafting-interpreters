@@ -2,7 +2,9 @@
  * BinaryExpr.java
  */
 
-package com.craftinginterpreters.lox;
+package com.craftinginterpreters.lox.ast;
+
+import com.craftinginterpreters.lox.Token;
 
 /**
  * The BinaryExpr class implements binary expressions.
@@ -29,14 +31,14 @@ public class BinaryExpr extends Expr {
    * @param operator The binary operator
    * @param right The right subexpression
    */
-  BinaryExpr(final Expr left, final Token operator, final Expr right) {
+  public BinaryExpr(final Expr left, final Token operator, final Expr right) {
     this.left = left;
     this.operator = operator;
     this.right = right;
   }
 
   @Override
-  <R> R accept(ExprVisitor<R> visitor) {
+  public <R> R accept(ExprVisitor<R> visitor) {
     return visitor.visitBinaryExpr(this);
   }
 }

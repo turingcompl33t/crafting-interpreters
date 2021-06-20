@@ -6,6 +6,12 @@ package com.craftinginterpreters.lox;
 
 import java.util.List;
 
+import com.craftinginterpreters.lox.ast.Expr;
+import com.craftinginterpreters.lox.ast.BinaryExpr;
+import com.craftinginterpreters.lox.ast.GroupingExpr;
+import com.craftinginterpreters.lox.ast.LiteralExpr;
+import com.craftinginterpreters.lox.ast.UnaryExpr;
+
 public class Parser {
   /**
    * The ParseError class denotes an error during parsing.

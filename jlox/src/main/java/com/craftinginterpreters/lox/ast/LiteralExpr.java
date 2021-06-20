@@ -2,7 +2,7 @@
  * LiteralExpr.java
  */
 
-package com.craftinginterpreters.lox;
+package com.craftinginterpreters.lox.ast;
 
 public class LiteralExpr extends Expr {
   /**
@@ -14,12 +14,12 @@ public class LiteralExpr extends Expr {
    * Construct a new LiteralExpr.
    * @param value The literal value
    */
-  LiteralExpr(final Object value) {
+  public LiteralExpr(final Object value) {
     this.value = value;
   }
 
   @Override
-  <R> R accept(ExprVisitor<R> visitor) {
+  public <R> R accept(ExprVisitor<R> visitor) {
     return visitor.visitLiteralExpr(this);
   }
 }

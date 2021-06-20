@@ -2,7 +2,9 @@
  * UnaryExpr.java
  */
 
-package com.craftinginterpreters.lox;
+package com.craftinginterpreters.lox.ast;
+
+import com.craftinginterpreters.lox.Token;
 
 /**
  * The UnaryExpr class implements unary expressions.
@@ -23,13 +25,13 @@ public class UnaryExpr extends Expr {
    * @param operator The unary operator
    * @param expression The expression
    */
-  UnaryExpr(final Token operator, final Expr expression) {
+  public UnaryExpr(final Token operator, final Expr expression) {
     this.operator = operator;
     this.expression = expression;
   }
 
   @Override
-  <R> R accept(ExprVisitor<R> visitor) {
+  public <R> R accept(ExprVisitor<R> visitor) {
     return visitor.visitUnaryExpr(this);
   }
 }

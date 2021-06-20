@@ -12,6 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
+import com.craftinginterpreters.lox.ast.*;
+
 /**
  * A dummy logger class that just writes to standard output.
  */
@@ -35,9 +37,19 @@ public class Lox {
   private static final String PROMPT = "> ";
 
   /**
-   * Denotes that an error occurred during program execution.
+   * Denotes that an error occurred during program loading (scanning / parsing).
    */
   private static boolean hadError = false;
+
+  /**
+   * Denotes than an error occurred during program execution.
+   */
+  private static boolean hadRuntimeError = false;
+
+  /**
+   * The interpreter instance on which programs are executed.
+   */
+  private static final Interpreter interpreter = new Interpreter();
 
   /**
    * Static class cannot be instantiated.
@@ -82,6 +94,9 @@ public class Lox {
     if (hadError) {
       System.exit(ExitCodes.EX_DATAERR);
     }
+    if (hadRuntimeError) {
+      System.exit(ExitCodes.EX_SOFTWARE);
+    }
   }
 
   /**
@@ -120,7 +135,8 @@ public class Lox {
       return;
     }
 
-    System.out.println(new AstPrinter().print(expression));
+    // Interpret the program
+    interpreter.interpret(expression);
   }
 
   // --------------------------------------------------------------------------
@@ -128,7 +144,7 @@ public class Lox {
   // --------------------------------------------------------------------------
 
   /**
-   * Report an error.
+   * Report an static error.
    * @param line The line number at which the error occurred
    * @param message The error message
    */
@@ -137,7 +153,7 @@ public class Lox {
   }
 
   /**
-   * Report a parse error.
+   * Report a (static) parse error.
    * @param token The token at which the error occurred
    * @param message The error message to display
    */
@@ -147,6 +163,20 @@ public class Lox {
     } else {
       report(token.getLine(), " at '" + token.getLexeme() + "'", message);
     }
+  }
+
+  /**
+   * Report a runtime error.
+   * @param error The error
+   */
+  public static void runtimeError(final RuntimeError error) {
+    StringBuilder builder = new StringBuilder();
+    builder.append(error.getMessage());
+    builder.append("\n[line ");
+    builder.append(error.token.getLine());
+    builder.append("]");
+    System.err.println(builder.toString());
+    hadRuntimeError = true;
   }
 
   /**

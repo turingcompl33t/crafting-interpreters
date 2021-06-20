@@ -4,6 +4,13 @@
 
 package com.craftinginterpreters.lox;
 
+import com.craftinginterpreters.lox.ast.Expr;
+import com.craftinginterpreters.lox.ast.ExprVisitor;
+import com.craftinginterpreters.lox.ast.BinaryExpr;
+import com.craftinginterpreters.lox.ast.GroupingExpr;
+import com.craftinginterpreters.lox.ast.LiteralExpr;
+import com.craftinginterpreters.lox.ast.UnaryExpr;
+
 /**
  * The AstPrinter class implements a simple AST printer
  * that displays explicit nesting of the Lox AST.
