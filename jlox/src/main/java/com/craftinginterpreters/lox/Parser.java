@@ -5,12 +5,9 @@
 package com.craftinginterpreters.lox;
 
 import java.util.List;
+import java.util.ArrayList;
 
-import com.craftinginterpreters.lox.ast.Expr;
-import com.craftinginterpreters.lox.ast.BinaryExpr;
-import com.craftinginterpreters.lox.ast.GroupingExpr;
-import com.craftinginterpreters.lox.ast.LiteralExpr;
-import com.craftinginterpreters.lox.ast.UnaryExpr;
+import com.craftinginterpreters.lox.ast.*;
 
 public class Parser {
   /**
@@ -38,18 +35,51 @@ public class Parser {
 
   /**
    * Parse the input token sequence to a Lox AST.
-   * @return The root of the AST
+   * @return The list of statements in the AST
    */
-  public Expr parse() {
-    try {
-      return expression();
-    } catch (ParseError e) {
-      return null;
+  public List<Stmt> parse() {
+    List<Stmt> statements = new ArrayList<>();
+    while (!isAtEnd()) {
+      statements.add(statement());
     }
+    return statements;
   }
 
   // --------------------------------------------------------------------------
-  // Productions
+  // Statement Productions
+  // --------------------------------------------------------------------------
+
+  /**
+   * Build the syntax tree for the `statement` production.
+   * @return The `statement` syntax tree
+   */
+  private Stmt statement() {
+    if (match(TokenType.PRINT)) return printStatement();
+    return expressionStatement();
+  }
+
+  /**
+   * Build the syntax tree for the `print statement` production.
+   * @return The `print statement` syntax tree
+   */
+  private Stmt printStatement() {
+    final Expr value = expression();
+    consume(TokenType.SEMICOLON, "Expected ';' after value.");
+    return new PrintStmt(value);
+  }
+
+  /**
+   * Build the syntax tree for the `expression statement` production.
+   * @return The `expression statement` syntax tree
+   */
+  private Stmt expressionStatement() {
+    final Expr expr = expression();
+    consume(TokenType.SEMICOLON, "Expect ';' after expression.");
+    return new ExpressionStmt(expr);
+  }
+
+  // --------------------------------------------------------------------------
+  // Expression Productions
   // --------------------------------------------------------------------------
 
   /**

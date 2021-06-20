@@ -128,7 +128,7 @@ public class Lox {
 
     // Parse the scanned tokens to the Lox AST
     Parser parser = new Parser(tokens);
-    final Expr expression = parser.parse();
+    final List<Stmt> statements = parser.parse();
 
     if (hadError) {
       // Syntax error during parsing
@@ -136,7 +136,7 @@ public class Lox {
     }
 
     // Interpret the program
-    interpreter.interpret(expression);
+    interpreter.interpret(statements);
   }
 
   // --------------------------------------------------------------------------

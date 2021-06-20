@@ -4,12 +4,14 @@
 
 package com.craftinginterpreters.lox;
 
+import java.util.List;
+
 import com.craftinginterpreters.lox.ast.*;
 
 /**
  * The Interpreter class implements a tree-walk interpreter for Lox.
  */
-public class Interpreter implements ExprVisitor<Object> {
+public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
   /**
    * Construct a new Interpreter instance.
    */
@@ -18,26 +20,66 @@ public class Interpreter implements ExprVisitor<Object> {
   }
 
   /**
-   * Interpret the expression.
-   * @param expression The expression
+   * Interpret a Lox program.
+   * @param statements The list of statements that compose the program
    */
-  public void interpret(final Expr expression) {
+  public void interpret(final List<Stmt> statements) {
     try {
-      final Object value = evaluate(expression);
-      System.out.println(stringify(value));
+      for (final Stmt statement : statements) {
+        execute(statement);
+      }
     } catch (RuntimeError error) {
       Lox.runtimeError(error);
     }
   }
 
   /**
-   * Evaluate the expression; a simple way to recurse within the interpreter.
+   * Evaluate the expression.
    * @param expression The expression to evaluate
    * @return The runtime value
    */
   private Object evaluate(final Expr expr) {
     return expr.accept(this);
   }
+
+  /**
+   * Execute a statement.
+   * @param statement The statement to execute
+   */
+  private void execute(final Stmt statement) {
+    statement.accept(this);
+  }
+
+  // --------------------------------------------------------------------------
+  // Statement Visitors
+  // --------------------------------------------------------------------------
+
+  /**
+   * Evaluate an expression statement.
+   * @param stmt The statement
+   * @return null
+   */
+  @Override
+  public Void visitExpressionStmt(final ExpressionStmt stmt) {
+    evaluate(stmt.expression);
+    return null;
+  }
+
+  /**
+   * Evaluate a print statement.
+   * @param stmt The statement
+   * @return null
+   */
+  @Override
+  public Void visitPrintStmt(final PrintStmt stmt) {
+    final Object value = evaluate(stmt.expression);
+    System.out.println(stringify(value));
+    return null;
+  }
+
+  // --------------------------------------------------------------------------
+  // Expression Visitors
+  // --------------------------------------------------------------------------
   
   /**
    * Evaluate a literal expression.
