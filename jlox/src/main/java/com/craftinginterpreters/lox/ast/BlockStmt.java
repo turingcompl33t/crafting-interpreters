@@ -27,4 +27,9 @@ public class BlockStmt extends Stmt {
   public <R> R accept(StmtVisitor<R> visitor) {
     return visitor.visitBlockStmt(this);
   }
+
+  @Override
+  public String toString() {
+    return "BlockStmt";
+  }
 }

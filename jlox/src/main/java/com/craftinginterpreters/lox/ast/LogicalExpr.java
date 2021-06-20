@@ -41,4 +41,9 @@ public class LogicalExpr extends Expr {
   public <R> R accept(ExprVisitor<R> visitor) {
     return visitor.visitLogicalExpr(this);
   }
+
+  @Override
+  public String toString() {
+    return "LogicalExpr";
+  }
 }

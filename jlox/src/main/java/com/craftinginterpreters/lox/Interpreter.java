@@ -79,6 +79,20 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
   }
 
   /**
+   * Evaluate a while-statement.
+   * @param stmt The statement
+   * @return null
+   */
+  @Override
+  public Void visitWhileStmt(final WhileStmt stmt) {
+    // This translation from the AST to interpretation is beautiful
+    while (isTruthy(evaluate(stmt.condition))) {
+      execute(stmt.body);
+    }
+    return null;
+  }
+
+  /**
    * Evaluate an if-statement.
    * @param stmt The statement
    * @return null

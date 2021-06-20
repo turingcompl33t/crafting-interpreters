@@ -39,4 +39,9 @@ public class IfStmt extends Stmt {
   public <R> R accept(StmtVisitor<R> visitor) {
     return visitor.visitIfStmt(this);
   }
+
+  @Override
+  public String toString() {
+    return "IfStmt";
+  }
 }

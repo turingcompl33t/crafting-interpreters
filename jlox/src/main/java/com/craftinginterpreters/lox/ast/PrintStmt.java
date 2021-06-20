@@ -25,4 +25,9 @@ public class PrintStmt extends Stmt {
   public <R> R accept(StmtVisitor<R> visitor) {
     return visitor.visitPrintStmt(this);
   }
+
+  @Override
+  public String toString() {
+    return "PrintStmt";
+  }
 }

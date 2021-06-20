@@ -34,4 +34,9 @@ public class UnaryExpr extends Expr {
   public <R> R accept(ExprVisitor<R> visitor) {
     return visitor.visitUnaryExpr(this);
   }
+
+  @Override
+  public String toString() {
+    return "UnaryExpr";
+  }
 }

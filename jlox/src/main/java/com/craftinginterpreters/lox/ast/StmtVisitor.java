@@ -13,4 +13,5 @@ public interface StmtVisitor<R> {
   public R visitIfStmt(IfStmt stmt);
   public R visitPrintStmt(PrintStmt stmt);
   public R visitVarStmt(VarStmt stmt);
+  public R visitWhileStmt(WhileStmt stmt);
 }

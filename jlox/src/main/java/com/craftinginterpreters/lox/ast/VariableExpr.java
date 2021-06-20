@@ -27,4 +27,9 @@ public class VariableExpr extends Expr {
   public <R> R accept(ExprVisitor<R> visitor) {
     return visitor.visitVariableExpr(this);
   }
+
+  @Override
+  public String toString() {
+    return "VariableExpr";
+  }
 }

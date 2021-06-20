@@ -34,4 +34,9 @@ public class VarStmt extends Stmt {
   public <R> R accept(StmtVisitor<R> visitor) {
     return visitor.visitVarStmt(this);
   }
+
+  @Override
+  public String toString() {
+    return "VarStmt";
+  }
 }

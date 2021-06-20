@@ -25,4 +25,9 @@ public class ExpressionStmt extends Stmt {
   public <R> R accept(StmtVisitor<R> visitor) {
     return visitor.visitExpressionStmt(this);
   }
+
+  @Override
+  public String toString() {
+    return "ExpressionStmt";
+  }
 }

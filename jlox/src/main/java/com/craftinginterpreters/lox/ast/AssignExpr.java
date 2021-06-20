@@ -34,4 +34,9 @@ public class AssignExpr extends Expr {
   public <R> R accept(ExprVisitor<R> visitor) {
     return visitor.visitAssignExpr(this);
   }
+
+  @Override
+  public String toString() {
+    return "AssignExpr";
+  }
 }

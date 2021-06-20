@@ -15,4 +15,10 @@ public abstract class Expr {
    * @return Visitor-dependent value
    */
   public abstract <R> R accept(ExprVisitor<R> visitor);
+
+  /**
+   * Create a string representation for the expression.
+   * @return The string representation
+   */
+  public abstract String toString();
 }

@@ -22,4 +22,9 @@ public class LiteralExpr extends Expr {
   public <R> R accept(ExprVisitor<R> visitor) {
     return visitor.visitLiteralExpr(this);
   }
+
+  @Override
+  public String toString() {
+    return "LiteralExpr";
+  }
 }

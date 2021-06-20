@@ -41,4 +41,9 @@ public class BinaryExpr extends Expr {
   public <R> R accept(ExprVisitor<R> visitor) {
     return visitor.visitBinaryExpr(this);
   }
+
+  @Override
+  public String toString() {
+    return "BinaryExpr";
+  }
 }

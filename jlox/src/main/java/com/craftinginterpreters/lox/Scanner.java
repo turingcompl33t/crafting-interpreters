@@ -117,10 +117,10 @@ public class Scanner {
         addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
         break;
       case '<':
-        addToken(match('=') ? TokenType.LESS_EQUAL : TokenType.EQUAL);
+        addToken(match('=') ? TokenType.LESS_EQUAL : TokenType.LESS);
         break;
       case '>':
-        addToken(match('>') ? TokenType.GREATER_EQUAL : TokenType.EQUAL);
+        addToken(match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER);
         break;
       
         // Special case for '/' because of comments

@@ -5,6 +5,7 @@
 package com.craftinginterpreters.lox;
 
 import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
 
 import com.craftinginterpreters.lox.ast.*;
@@ -82,8 +83,68 @@ public class Parser {
   private Stmt statement() {
     if (match(TokenType.IF)) return ifStatement();
     if (match(TokenType.PRINT)) return printStatement();
+    if (match(TokenType.WHILE)) return whileStatement();
+    if (match(TokenType.FOR)) return forStatement();
     if (match(TokenType.LEFT_BRACE)) return new BlockStmt(block());
     return expressionStatement();
+  }
+
+  /**
+   * Build the syntax tree for the `whileStatement` production.
+   * @return The `whileStatement` syntax tree
+   */
+  private Stmt whileStatement() {
+    consume(TokenType.LEFT_PAREN, "Expect '(' after 'while'.");
+    final Expr condition = expression();
+    consume(TokenType.RIGHT_PAREN, "Expected ')' after loop condition.");
+    final Stmt body = statement();
+    return new WhileStmt(condition, body);
+  }
+
+  /**
+   * Build the syntax tree for the `forStatement` production`.
+   * @return The `forStatement` syntax tree
+   */
+  private Stmt forStatement() {
+    consume(TokenType.LEFT_PAREN, "Expect '(' after 'for'.");
+
+    Stmt initializer;
+    if (match(TokenType.SEMICOLON)) {
+      initializer = null;
+    } else if (match(TokenType.VAR)) {
+      initializer = varDeclaration();
+    } else {
+      initializer = expressionStatement();
+    }
+
+    Expr condition = !check(TokenType.SEMICOLON) ? expression() : null;
+    consume(TokenType.SEMICOLON, "Expect ';' after loop condition.");
+
+    final Expr increment = !check(TokenType.RIGHT_PAREN) ? expression() : null;
+    consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses.");
+
+    // We model a for-loop construct by de-surgaring to a while-loop
+    Stmt body = statement();
+
+    // If the increment is present, append the increment
+    // as the final statement in the loop body
+    if (increment != null) {
+      body = new BlockStmt(
+        Arrays.asList(body, new ExpressionStmt(increment)));
+    }
+
+    // If the condition is not present, model it with `while(true)`
+    if (condition == null) condition = new LiteralExpr(true);
+    body = new WhileStmt(condition, body);
+
+    // Finally, if there is an initializer, wrap the entire
+    // loop in a new block statement that contains the
+    // initializer as the first statement in the block
+    if (initializer != null) {
+      body = new BlockStmt(Arrays.asList(initializer, body));
+    }
+
+    return body;
   }
 
   /**
