@@ -79,6 +79,21 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
   }
 
   /**
+   * Evaluate an if-statement.
+   * @param stmt The statement
+   * @return null
+   */
+  @Override
+  public Void visitIfStmt(final IfStmt stmt) {
+    if (isTruthy(evaluate(stmt.condition))) {
+      execute(stmt.thenBranch);
+    } else if (stmt.elseBranch != null) {
+      execute(stmt.elseBranch);
+    }
+    return null;
+  }
+
+  /**
    * Evaluate a print statement.
    * @param stmt The statement
    * @return null
@@ -125,6 +140,26 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
   @Override
   public Object visitLiteralExpr(final LiteralExpr expr) {
     return expr.value;
+  }
+
+  /**
+   * Evaluate a logical expression.
+   * @param expr The expression
+   * @return The runtime value
+   */
+  @Override
+  public Object visitLogicalExpr(final LogicalExpr expr) {
+    // Here we see the short-circuiting behavior of
+    // the logical operators in action: the right side
+    // of the expression is not evaluated in the event
+    // that we can determine the result without it
+    final Object left = evaluate(expr.left);
+    if (expr.operator.getType() == TokenType.OR) {
+      if (isTruthy(left)) return left;
+    } else {
+      if (!isTruthy(left)) return left;
+    }
+    return evaluate(expr.right);
   }
 
   /**

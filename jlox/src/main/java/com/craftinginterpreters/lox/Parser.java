@@ -80,9 +80,24 @@ public class Parser {
    * @return The `statement` syntax tree
    */
   private Stmt statement() {
+    if (match(TokenType.IF)) return ifStatement();
     if (match(TokenType.PRINT)) return printStatement();
     if (match(TokenType.LEFT_BRACE)) return new BlockStmt(block());
     return expressionStatement();
+  }
+
+  /**
+   * Build the syntax tree for the `ifStatement` production.
+   * @return The `ifStatement` syntax tree
+   */
+  private Stmt ifStatement() {
+    consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'.");
+    final Expr condition = expression();
+    consume(TokenType.RIGHT_PAREN, "Expect ')' after branch condition.");
+
+    final Stmt thenBranch = statement();
+    final Stmt elseBranch = match(TokenType.ELSE) ? statement() : null;
+    return new IfStmt(condition, thenBranch, elseBranch);
   }
 
   /**
@@ -135,8 +150,7 @@ public class Parser {
    * @return The `assignment` syntax tree
    */
   private Expr assignment() {
-    Expr expr = equality();
-    
+    Expr expr = or();
     if (match(TokenType.EQUAL)) {
       final Token equals = previous();
       // Recursively call assignment() to evaluate the right-hand side
@@ -152,6 +166,34 @@ public class Parser {
 
     return expr;
   } 
+
+  /**
+   * Build the syntax tree for the `or` production.
+   * @return The `or` syntax tree
+   */
+  private Expr or() {
+    Expr expr = and();
+    while (match(TokenType.OR)) {
+      final Token operator = previous();
+      final Expr right = and();
+      expr = new LogicalExpr(expr, operator, right);
+    }
+    return expr;
+  }
+
+  /**
+   * Build the syntax tree for the `and` production.
+   * @return The `and` syntax tree
+   */
+  private Expr and() {
+    Expr expr = equality();
+    while (match(TokenType.AND)) {
+      final Token operator = previous();
+      final Expr right = equality();
+      expr = new LogicalExpr(expr, operator, right);
+    }
+    return expr;
+  }
 
   /**
    * Build the syntax tree for the `equality` production.
