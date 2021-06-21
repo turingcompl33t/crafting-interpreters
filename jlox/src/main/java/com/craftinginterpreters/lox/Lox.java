@@ -130,10 +130,15 @@ public class Lox {
     Parser parser = new Parser(tokens);
     final List<Stmt> statements = parser.parse();
 
-    if (hadError) {
-      // Syntax error during parsing
-      return;
-    }
+    // Syntax error during parsing
+    if (hadError) return;
+
+    // Run the resolver pass
+    Resolver resolver = new Resolver(interpreter);
+    resolver.resolve(statements);
+
+    // Resolution error
+    if (hadError) return;
 
     // Interpret the program
     interpreter.interpret(statements);

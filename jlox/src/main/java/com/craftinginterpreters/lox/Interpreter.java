@@ -4,7 +4,9 @@
 
 package com.craftinginterpreters.lox;
 
+import java.util.Map;
 import java.util.List;
+import java.util.HashMap;
 import java.util.ArrayList;
 
 import com.craftinginterpreters.lox.ast.*;
@@ -13,6 +15,10 @@ import com.craftinginterpreters.lox.ast.*;
  * The Interpreter class implements a tree-walk interpreter for Lox.
  */
 public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
+
+  // --------------------------------------------------------------------------
+  // Instance Members
+  // --------------------------------------------------------------------------
 
   /**
    * The global (top-level) interpreter environment.
@@ -25,12 +31,13 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
   private Environment environment = globals;
 
   /**
-   * Get the global environment for the interpreter.
-   * @return The interpreter global environment
+   * The map of resolved local variables.
    */
-  public Environment getGlobals() {
-    return globals;
-  }
+  private final Map<Expr, Integer> locals = new HashMap<>();
+
+  // --------------------------------------------------------------------------
+  // Constructor
+  // --------------------------------------------------------------------------
 
   /**
    * Construct a new Interpreter instance.
@@ -50,6 +57,10 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
       public String toString() { return "<native fn>"; }
     });
   }
+
+  // --------------------------------------------------------------------------
+  // Top-Level Interpretation
+  // --------------------------------------------------------------------------
 
   /**
    * Interpret a Lox program.
@@ -80,6 +91,15 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
    */
   public void execute(final Stmt statement) {
     statement.accept(this);
+  }
+
+  /**
+   * Resolve variable usage.
+   * @param expr The variable expression
+   * @param depth The depth to which the usage was resolved=
+   */
+  public void resolve(final Expr expr, final int depth) {
+    locals.put(expr, depth);
   }
 
   /**
@@ -361,7 +381,7 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
    */
   @Override
   public Object visitVariableExpr(final VariableExpr expr) {
-    return environment.get(expr.name);
+    return lookupVariable(expr.name, expr);
   }
 
   /**
@@ -372,12 +392,18 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
   @Override
   public Object visitAssignExpr(final AssignExpr expr) {
     final Object value = evaluate(expr.value);
-    environment.assign(expr.name, value);
+
+    final Integer distance = locals.get(expr);
+    if (distance != null) {
+      environment.assignAt(distance, expr.name, value);
+    } else {
+      globals.assign(expr.name, value);
+    }
     return value;
   }
 
   // --------------------------------------------------------------------------
-  // TODO
+  // Language Semantics Utilities
   // --------------------------------------------------------------------------
 
   /**
@@ -440,4 +466,32 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     }
     return value.toString();
   }
+
+  // --------------------------------------------------------------------------
+  // Utilities
+  // --------------------------------------------------------------------------
+
+  /**
+   * Lookup a variable usage.
+   * @param name The variable identifier
+   * @param expr The variable expression
+   * @return The resolved variable
+   */
+  private Object lookupVariable(final Token name, final Expr expr) {
+    final Integer distance = locals.get(expr);
+    if (distance != null) {
+      return environment.getAt(distance, name.getLexeme());
+    } else {
+      return globals.get(name);
+    }
+  }
+
+  /**
+   * Get the global environment for the interpreter.
+   * @return The interpreter global environment
+   */
+  public Environment getGlobals() {
+    return globals;
+  }
+
 }

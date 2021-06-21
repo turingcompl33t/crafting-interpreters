@@ -56,6 +56,17 @@ public class Environment {
   }
 
   /**
+   * Get the runtime value for a variable at the specified distance.
+   * @param distance The distance at which to search for the variable
+   * @param name The variable identifier
+   * @return The runtime value for the variable
+   * @throws RuntimeError If the variable is not defined
+   */
+  public Object getAt(final int distance, final String name) throws RuntimeError {
+    return ancestor(distance).values.get(name);
+  }
+
+  /**
    * Define a variable in the environment.
    * @param name The variable identifier
    * @param value The variable value
@@ -66,6 +77,11 @@ public class Environment {
     values.put(name, value);
   }
 
+  /**
+   * Assign a variable.
+   * @param name The variable identifier
+   * @param value The runtime value
+   */
   public void assign(final Token name, final Object value) {
     final String lexeme = name.getLexeme();
     if (values.containsKey(lexeme)) {
@@ -80,5 +96,28 @@ public class Environment {
     }
 
     throw new RuntimeError(name, "Undefined variable '" + lexeme + "'");
+  }
+
+  /**
+   * Assign a variable at the given distance.
+   * @param distance The distance at which to perform the assignment
+   * @param name The variable identifier
+   * @param value The runtime value
+   */
+  public void assignAt(final int distance, final Token name, final Object value) {
+    ancestor(distance).values.put(name.getLexeme(), value);
+  }
+
+  /**
+   * Get the ancestor environment at the specified distance.
+   * @param distance The distance
+   * @return The ancestor environment
+   */
+  private Environment ancestor(final int distance) {
+    Environment env = this;
+    for (int i = 0; i < distance; ++i) {
+      env = env.enclosing;
+    }
+    return env;
   }
 }
