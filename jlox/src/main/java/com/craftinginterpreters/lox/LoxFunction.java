@@ -23,13 +23,31 @@ public class LoxFunction implements LoxCallable {
   private final Environment closure;
 
   /**
+   * Denotes whether this function is a class initializer.
+   */
+  private final boolean isInitializer;
+
+  /**
    * Construct a new LoxFunction instance.
    * @param declaration The associated declaration
    * @param closure The captured environment
    */
-  public LoxFunction(final FunctionStmt declaration, final Environment closure) {
+  public LoxFunction(final FunctionStmt declaration, final Environment closure,
+                     final boolean isInitializer) {
     this.declaration = declaration;
     this.closure = closure;
+    this.isInitializer = isInitializer;
+  }
+
+  /**
+   * Create a LoxFunction bound to a particular instance.
+   * @param instance The instance to which the function is bound
+   * @return The bound function
+   */
+  LoxFunction bind(LoxInstance instance) {
+    final Environment env = new Environment(closure);
+    env.define("this", instance);
+    return new LoxFunction(declaration, env, isInitializer);
   }
 
   @Override
@@ -51,9 +69,14 @@ public class LoxFunction implements LoxCallable {
     try {
       interpreter.executeBlock(declaration.body, environment);
     } catch (Return returnValue) {
+      // Allow early returns in initializers
+      if (isInitializer) return closure.getAt(0, "this");
       return returnValue.value;
     }
 
+    // If the function is a class initializer, we override
+    // the return value and always return `this`
+    if (isInitializer) return closure.getAt(0, "this");
     return null;
   }
 

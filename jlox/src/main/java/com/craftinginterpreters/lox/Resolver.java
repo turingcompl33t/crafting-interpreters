@@ -21,7 +21,16 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
   private enum FunctionType {
     NONE,
     FUNCTION,
+    INITIALIZER,
     METHOD
+  }
+
+  /**
+   * The ClassType enumeration defines class types.
+   */
+  private enum ClassType {
+    NONE,
+    CLASS
   }
 
   /**
@@ -38,6 +47,11 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
    * Denotes the current function, if any. 
    */
   private FunctionType currentFunction = FunctionType.NONE;
+
+  /**
+   * Denotes the current class, if any.
+   */
+  private ClassType currentClass = ClassType.NONE;
 
   /**
    * Construct a new Resolver instance.
@@ -127,8 +141,25 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
     }
     
     if (stmt.value != null) {
+      if (currentFunction == FunctionType.INITIALIZER) {
+        Lox.error(stmt.keyword, "Can't return a value from a class initializer.");
+      }
       resolve(stmt.value);
     }
+    return null;
+  }
+
+  /**
+   * Visit a this expression.
+   * @param expr The expression
+   */
+  @Override
+  public Void visitThisExpr(final ThisExpr expr) {
+    if (currentClass == ClassType.NONE) {
+      Lox.error(expr.keyword, "Can't use 'this' outside of a class.");
+    }
+
+    resolveLocal(expr, expr.keyword);
     return null;
   }
 
@@ -270,14 +301,28 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
    */
   @Override
   public Void visitClassStmt(final ClassStmt stmt) {
+    final ClassType enclosingClass = currentClass;
+    currentClass = ClassType.CLASS;
+    
     declare(stmt.name);
     define(stmt.name);
 
+    // `this` is implicitly defined in the scope for each method
+    beginScope();
+    scopes.peek().put("this", true);
+
     for (final FunctionStmt method : stmt.body) {
-      final FunctionType declaration = FunctionType.METHOD;
+      // Initializers require special attention; we don't want
+      // to allow users to return arbitrary values from initializers
+      final FunctionType declaration = method.name.getLexeme().equals("init") 
+        ? FunctionType.INITIALIZER 
+        : FunctionType.METHOD;
       resolveFunction(method, declaration);
     }
 
+    endScope();
+
+    currentClass = enclosingClass;
     return null;
   }
 

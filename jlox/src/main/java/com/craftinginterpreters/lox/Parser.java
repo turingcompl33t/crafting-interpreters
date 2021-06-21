@@ -439,6 +439,8 @@ public class Parser {
       return new LiteralExpr(previous().getLiteral());
     }
 
+    if (match(TokenType.THIS)) return new ThisExpr(previous());
+
     if (match(TokenType.IDENTIFER)) {
       return new VariableExpr(previous());
     }

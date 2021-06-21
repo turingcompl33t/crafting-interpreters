@@ -19,4 +19,5 @@ public interface ExprVisitor<R> {
   public R visitSetExpr(SetExpr expr);
   public R visitUnaryExpr(UnaryExpr expr);
   public R visitVariableExpr(VariableExpr expr);
+  public R visitThisExpr(ThisExpr expr);
 }

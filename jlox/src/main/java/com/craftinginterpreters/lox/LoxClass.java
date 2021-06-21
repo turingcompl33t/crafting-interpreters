@@ -36,7 +36,16 @@ public class LoxClass implements LoxCallable {
    */
   @Override
   public Object call(Interpreter interpreter, final List<Object> arguments) {
-    return new LoxInstance(this);
+    // Create the instance
+    final LoxInstance instance = new LoxInstance(this);
+
+    // If the class defines an initializer, invoke it
+    final LoxFunction initializer = findMethod("init");
+    if (initializer != null) {
+      initializer.bind(instance).call(interpreter, arguments);
+    }
+
+    return instance;
   }
 
   /**
@@ -44,7 +53,8 @@ public class LoxClass implements LoxCallable {
    */
   @Override
   public int arity() {
-    return 0;
+    final LoxFunction initializer = findMethod("init");
+    return (initializer != null) ? initializer.arity() : 0;
   }
 
   /**

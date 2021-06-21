@@ -45,7 +45,7 @@ public class LoxInstance {
 
     // OR the get expression might return a method defined in the class
     final LoxFunction method = klass.findMethod(name.getLexeme());
-    if (method != null) return method;
+    if (method != null) return method.bind(this);
 
     throw new RuntimeError(name,
       "Undefined property '" + name.getLexeme() + "'");

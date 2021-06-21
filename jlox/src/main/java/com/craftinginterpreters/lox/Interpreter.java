@@ -145,7 +145,7 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
   public Void visitFunctionStmt(final FunctionStmt stmt) {
     // When we create the function, we capture the environment
     // in which it is defined; this allows us to support closures
-    final LoxFunction function = new LoxFunction(stmt, environment);
+    final LoxFunction function = new LoxFunction(stmt, environment, false);
     environment.define(stmt.name.getLexeme(), function);
     return null;
   }
@@ -237,7 +237,8 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     // Translate each method declaration into a runtime LoxFunction
     Map<String, LoxFunction> methods = new HashMap<>();
     for (final FunctionStmt method : stmt.body) {
-      LoxFunction function = new LoxFunction(method, environment);
+      LoxFunction function = new LoxFunction(method, environment,
+        method.name.getLexeme().equals("init"));
       methods.put(method.name.getLexeme(), function);
     }
 
@@ -410,6 +411,11 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     throw new RuntimeError(expr.name, "Only instances have properties.");
   }
 
+  /**
+   * Evaluate an instance set expression.
+   * @param expr The expression
+   * @return The runtime value
+   */
   @Override
   public Object visitSetExpr(final SetExpr expr) {
     final Object object = evaluate(expr.object);
@@ -421,6 +427,16 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     final Object value = evaluate(expr.value);
     ((LoxInstance)object).set(expr.name, value);
     return value;
+  }
+
+  /**
+   * Evaluate an instance this expression.
+   * @param expr The expression
+   * @return The runtime value
+   */
+  @Override
+  public Object visitThisExpr(final ThisExpr expr) {
+    return lookupVariable(expr.keyword, expr);
   }
 
   /**

@@ -1,0 +1,18 @@
+// class.lox
+class Dog {
+  speak() {
+    print "woof";
+  }
+}
+
+class Cat {
+  speak() {
+    print "meow";
+  }
+}
+
+var dog = Dog();
+var cat = Cat();
+
+dog.speak();
+cat.speak();
