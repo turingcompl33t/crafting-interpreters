@@ -232,7 +232,22 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
    */
   @Override
   public Void visitClassStmt(final ClassStmt stmt) {
+    // Evaluate the superclass, if present
+    Object superclass = null;
+    if (stmt.superclass != null) {
+      superclass = evaluate(stmt.superclass);
+      if (!(superclass instanceof LoxClass)) {
+        throw new RuntimeError(stmt.superclass.name, "Superclass must be a class.");
+      }
+    }
+
     environment.define(stmt.name.getLexeme(), null);
+
+    // Create a new environment for use of `super` keyword
+    if (stmt.superclass != null) {
+      environment = new Environment(environment);
+      environment.define("super", superclass);
+    }
 
     // Translate each method declaration into a runtime LoxFunction
     Map<String, LoxFunction> methods = new HashMap<>();
@@ -242,7 +257,13 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
       methods.put(method.name.getLexeme(), function);
     }
 
-    final LoxClass klass = new LoxClass(stmt.name.getLexeme(), methods);
+    final LoxClass klass = new LoxClass(stmt.name.getLexeme(),
+      (LoxClass)superclass, methods);
+
+    if (superclass != null) {
+      environment = environment.enclosing;
+    }
+
     environment.assign(stmt.name, klass);
     
     return null;
@@ -427,6 +448,26 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     final Object value = evaluate(expr.value);
     ((LoxInstance)object).set(expr.name, value);
     return value;
+  }
+
+  /**
+   * Evaluate a `super` expression.
+   * @param expr The expression
+   * @return The runtime value
+   */
+  @Override
+  public Object visitSuperExpr(final SuperExpr expr) {
+    final int distance = locals.get(expr);
+    final LoxClass superclass = (LoxClass)environment.getAt(distance, "super");
+    final LoxInstance object = (LoxInstance)environment.getAt(distance - 1, "this");
+
+    final LoxFunction method = superclass.findMethod(expr.method.getLexeme());
+    if (method == null) {
+      throw new RuntimeError(expr.method,
+        "Undefined property '" + expr.method.getLexeme() + "'.");
+    }
+
+    return method.bind(object);
   }
 
   /**

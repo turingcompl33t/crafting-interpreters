@@ -1,0 +1,24 @@
+// super.lox
+class Animal {
+  speak() {
+    return "This animal says ";
+  }
+}
+
+class Dog < Animal {
+  speak() {
+    return super.speak() + "woof";
+  }
+}
+
+class Cat < Animal {
+  speak() {
+    return super.speak() + "meow";
+  }
+}
+
+var dog = Dog();
+var cat = Cat();
+
+print dog.speak();
+print cat.speak();

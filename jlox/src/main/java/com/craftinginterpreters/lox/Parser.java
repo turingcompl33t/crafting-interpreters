@@ -221,6 +221,14 @@ public class Parser {
    */
   private Stmt classDeclaration() {
     final Token name = consume(TokenType.IDENTIFER, "Expect class name.");
+
+    // If the class declares a superclass, grab it
+    VariableExpr superclass = null;
+    if (match(TokenType.LESS)) {
+      consume(TokenType.IDENTIFER, "Expect a superclass name.");
+      superclass = new VariableExpr(previous());
+    }
+
     consume(TokenType.LEFT_BRACE, "Expect '{' before class body.");
 
     List<FunctionStmt> methods = new ArrayList<>();
@@ -228,7 +236,7 @@ public class Parser {
       methods.add(function("method"));
     }
     consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.");
-    return new ClassStmt(name, methods);
+    return new ClassStmt(name, superclass, methods);
   }
 
   /**
@@ -434,6 +442,13 @@ public class Parser {
     if (match(TokenType.FALSE)) return new LiteralExpr(false);
     if (match(TokenType.TRUE)) return new LiteralExpr(true);
     if (match(TokenType.NIL)) return new LiteralExpr(null);
+
+    if (match(TokenType.SUPER)) {
+      final Token keyword = previous();
+      consume(TokenType.DOT, "Expect '.' after 'super'.");
+      final Token method = consume(TokenType.IDENTIFER, "Expect superclass method name.");
+      return new SuperExpr(keyword, method);
+    }
 
     if (match(TokenType.NUMBER, TokenType.STRING)) {
       return new LiteralExpr(previous().getLiteral());

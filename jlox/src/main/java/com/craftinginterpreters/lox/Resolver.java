@@ -30,7 +30,8 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
    */
   private enum ClassType {
     NONE,
-    CLASS
+    CLASS,
+    SUBCLASS
   }
 
   /**
@@ -256,6 +257,22 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
   }
 
   /**
+   * Visit a super expression.
+   * @param expr The expression
+   */
+  @Override
+  public Void visitSuperExpr(final SuperExpr expr) {
+    if (currentClass == ClassType.NONE) {
+      Lox.error(expr.keyword, "Can't use 'super' outside of a class.");
+    } else if (currentClass != ClassType.SUBCLASS) {
+      Lox.error(expr.keyword, "Can't use 'super' in a class with no superclass.");
+    }
+
+    resolveLocal(expr, expr.keyword);
+    return null;
+  }
+
+  /**
    * Visit a grouping expression.
    * @param expr The expression
    */
@@ -307,6 +324,24 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
     declare(stmt.name);
     define(stmt.name);
 
+    if (stmt.superclass != null &&
+      stmt.name.getLexeme().equals(stmt.superclass.name.getLexeme())) {
+      Lox.error(stmt.superclass.name, "A class cannot inherit from itself.");
+    }
+
+    // If the class defines a superclass, resolve it
+    if (stmt.superclass != null) {
+      currentClass = ClassType.SUBCLASS;
+      resolve(stmt.superclass);
+    }
+
+    // If the class declaration has a superclass,
+    // create a new scope surrounding all of its methods
+    if (stmt.superclass != null) {
+      beginScope();
+      scopes.peek().put("super", true);
+    }
+
     // `this` is implicitly defined in the scope for each method
     beginScope();
     scopes.peek().put("this", true);
@@ -321,6 +356,9 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
     }
 
     endScope();
+
+    // If we created a scope for the superclass methods, end it
+    if (stmt.superclass != null) endScope();
 
     currentClass = enclosingClass;
     return null;

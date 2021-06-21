@@ -17,6 +17,11 @@ public class ClassStmt extends Stmt {
   public final Token name;
 
   /**
+   * The class superclass (if applicable).
+   */
+  public final VariableExpr superclass;
+
+  /**
    * The body of the class declaration (methods).
    */
   public final List<FunctionStmt> body;
@@ -24,10 +29,13 @@ public class ClassStmt extends Stmt {
   /**
    * Construct a new ClassStmt instance.
    * @param name The class name
+   * @param superclass The class superclass (if applicable)
    * @param body The class body (methods)
    */
-  public ClassStmt(final Token name, final List<FunctionStmt> body) {
+  public ClassStmt(final Token name, final VariableExpr superclass,
+                   final List<FunctionStmt> body) {
     this.name = name;
+    this.superclass = superclass;
     this.body = body;
   }
 

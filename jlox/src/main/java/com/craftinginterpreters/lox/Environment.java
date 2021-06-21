@@ -20,7 +20,7 @@ public class Environment {
   /**
    * A reference to the enclosing environment.
    */
-  private final Environment enclosing;
+  public final Environment enclosing;
 
   /**
    * Construct a new environment instance (root-scope).
