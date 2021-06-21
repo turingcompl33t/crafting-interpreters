@@ -225,6 +225,19 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     return null;
   }
 
+  /**
+   * Evaluate a class declaration statement.
+   * @param stmt The statement
+   * @return null
+   */
+  @Override
+  public Void visitClassStmt(final ClassStmt stmt) {
+    environment.define(stmt.name.getLexeme(), null);
+    final LoxClass klass = new LoxClass(stmt.name.getLexeme());
+    environment.assign(stmt.name, klass);
+    return null;
+  }
+
   // --------------------------------------------------------------------------
   // Expression Visitors
   // --------------------------------------------------------------------------

@@ -242,6 +242,17 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
     return null;
   }
 
+  /**
+   * Visit a class statement.
+   * @param stmt The statement
+   */
+  @Override
+  public Void visitClassStmt(final ClassStmt stmt) {
+    declare(stmt.name);
+    define(stmt.name);
+    return null;
+  }
+
   // --------------------------------------------------------------------------
   // Helpers
   // --------------------------------------------------------------------------

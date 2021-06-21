@@ -9,6 +9,7 @@ package com.craftinginterpreters.lox.ast;
  */
 public interface StmtVisitor<R> {
   public R visitBlockStmt(BlockStmt stmt);
+  public R visitClassStmt(ClassStmt stmt);
   public R visitExpressionStmt(ExpressionStmt stmt);
   public R visitFunctionStmt(FunctionStmt stmt);
   public R visitIfStmt(IfStmt stmt);

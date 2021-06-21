@@ -10,6 +10,8 @@ import java.util.ArrayList;
 
 import com.craftinginterpreters.lox.ast.*;
 
+import jdk.nashorn.api.tree.ClassDeclarationTree;
+
 public class Parser {
   /**
    * The ParseError class denotes an error during parsing.
@@ -61,6 +63,7 @@ public class Parser {
    */
   private Stmt declaration() {
     try {
+      if (match(TokenType.CLASS)) return classDeclaration();
       if (match(TokenType.FUN)) return function("function");
       if (match(TokenType.VAR)) return varDeclaration();
       return statement();
@@ -212,6 +215,27 @@ public class Parser {
     return new ExpressionStmt(expr);
   }
 
+  /**
+   * Build the syntax tree for the `classDeclaration` production.
+   * @return The `classDeclaration` syntax tree
+   */
+  private Stmt classDeclaration() {
+    final Token name = consume(TokenType.IDENTIFER, "Expect class name.");
+    consume(TokenType.LEFT_BRACE, "Expect '{' before class body.");
+
+    List<FunctionStmt> methods = new ArrayList<>();
+    while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
+      methods.add(function("method"));
+    }
+    consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.");
+    return new ClassStmt(name, methods);
+  }
+
+  /**
+   * Build the syntax tree for the `functionDeclaration` production.
+   * @param kind A string that identifies the kind of the function
+   * @return The `functionDeclaration` syntax tree
+   */
   private FunctionStmt function(final String kind) {
     final Token name = consume(TokenType.IDENTIFER, "Expect " + kind + " name.");
     consume(TokenType.LEFT_PAREN, "Expect '(' after " + kind + "name.");
