@@ -233,8 +233,17 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
   @Override
   public Void visitClassStmt(final ClassStmt stmt) {
     environment.define(stmt.name.getLexeme(), null);
-    final LoxClass klass = new LoxClass(stmt.name.getLexeme());
+
+    // Translate each method declaration into a runtime LoxFunction
+    Map<String, LoxFunction> methods = new HashMap<>();
+    for (final FunctionStmt method : stmt.body) {
+      LoxFunction function = new LoxFunction(method, environment);
+      methods.put(method.name.getLexeme(), function);
+    }
+
+    final LoxClass klass = new LoxClass(stmt.name.getLexeme(), methods);
     environment.assign(stmt.name, klass);
+    
     return null;
   }
 
@@ -385,6 +394,33 @@ public class Interpreter implements ExprVisitor<Object>, StmtVisitor<Void> {
     }
 
     return function.call(this, arguments);
+  }
+
+  /**
+   * Evaluate an instance get expression.
+   * @param expr The expression
+   * @return The runtime value
+   */
+  @Override
+  public Object visitGetExpr(final GetExpr expr) {
+    final Object object = evaluate(expr.object);
+    if (object instanceof LoxInstance) {
+      return ((LoxInstance)object).get(expr.name);
+    }
+    throw new RuntimeError(expr.name, "Only instances have properties.");
+  }
+
+  @Override
+  public Object visitSetExpr(final SetExpr expr) {
+    final Object object = evaluate(expr.object);
+
+    if (!(object instanceof LoxInstance)) {
+      throw new RuntimeError(expr.name, "Only instances have fields.");
+    }
+
+    final Object value = evaluate(expr.value);
+    ((LoxInstance)object).set(expr.name, value);
+    return value;
   }
 
   /**

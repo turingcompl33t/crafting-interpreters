@@ -5,6 +5,7 @@
 package com.craftinginterpreters.lox;
 
 import java.util.List;
+import java.util.Map;
 
 public class LoxClass implements LoxCallable {
   /**
@@ -13,11 +14,18 @@ public class LoxClass implements LoxCallable {
   public final String name;
 
   /**
+   * The class methods
+   */
+  private final Map<String, LoxFunction> methods;
+
+  /**
    * Construct a new LoxClass instance.
    * @param name The class name
+   * @param methods The class methods
    */
-  public LoxClass(final String name) {
+  public LoxClass(final String name, final Map<String, LoxFunction> methods) {
     this.name = name;
+    this.methods = methods;
   }
 
   /**
@@ -37,6 +45,18 @@ public class LoxClass implements LoxCallable {
   @Override
   public int arity() {
     return 0;
+  }
+
+  /**
+   * Find a method defined on the class.
+   * @param name The name of the method
+   * @return The method, or `null` if not found
+   */
+  public LoxFunction findMethod(final String name) {
+    if (methods.containsKey(name)) {
+      return methods.get(name);
+    }
+    return null;
   }
 
   /**

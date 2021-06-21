@@ -283,6 +283,9 @@ public class Parser {
       if (expr instanceof VariableExpr) {
         final Token name = ((VariableExpr)expr).name;
         return new AssignExpr(name, value);
+      } else if (expr instanceof GetExpr) {
+        final GetExpr get = (GetExpr)expr;
+        return new SetExpr(get.object, get.name, value);
       }
 
       error(equals, "Invalid target for assignment.");
@@ -397,6 +400,9 @@ public class Parser {
     while (true) {
       if (match(TokenType.LEFT_PAREN)) {
         expr = finishCall(expr);
+      } else if (match(TokenType.DOT)) {
+        final Token name = consume(TokenType.IDENTIFER, "Expect property name after '.'.");
+        expr = new GetExpr(expr, name);
       } else {
         break;
       }

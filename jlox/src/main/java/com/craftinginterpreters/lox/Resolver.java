@@ -20,7 +20,8 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
    */
   private enum FunctionType {
     NONE,
-    FUNCTION
+    FUNCTION,
+    METHOD
   }
 
   /**
@@ -203,6 +204,27 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
   }
 
   /**
+   * Visit a get expression.
+   * @param expr The expression
+   */
+  @Override
+  public Void visitGetExpr(final GetExpr expr) {
+    resolve(expr.object);
+    return null;
+  }
+
+  /**
+   * Visit a set expression.
+   * @param expr The expression
+   */
+  @Override
+  public Void visitSetExpr(final SetExpr expr) {
+    resolve(expr.value);
+    resolve(expr.object);
+    return null;
+  }
+
+  /**
    * Visit a grouping expression.
    * @param expr The expression
    */
@@ -250,6 +272,12 @@ public class Resolver implements ExprVisitor<Void>, StmtVisitor<Void> {
   public Void visitClassStmt(final ClassStmt stmt) {
     declare(stmt.name);
     define(stmt.name);
+
+    for (final FunctionStmt method : stmt.body) {
+      final FunctionType declaration = FunctionType.METHOD;
+      resolveFunction(method, declaration);
+    }
+
     return null;
   }
 
