@@ -14,7 +14,11 @@ Perhaps this is an iterative process, and we would need to update our grammar as
 
 **Parser**
 
-TODO
+I was genuinely surprised by the simplicitly and power of the recursive descent parser. There really weren't any surprises in the implementation of the parser, and I actually really enjoyed the process because we let the Java type system take care of so much of the heavy lifting. The AST is verbose in the sense that we implement a distinct Java class for each node type in the AST, but this definitely pays off in making the parser comprehensible and straightforward to implement.
+
+The one aspect of the parser that took me some time to wrap my head around was the inverse relationship between the precedence of a parsed object (i.e. an expression or a statement) and the order in which we attempt to parse these objects from the input sequence of tokens. Intuitively, however, this does make sense: we look for the highest-level structures first and descend through these higher-level structures to progressively lower-level structures until we hit the highest-precedence productions - the "atomic units" of our syntax like primary expressions.
+
+The other really interesting aspect of the parser implementation is the recovery mechanism: how do we recover from syntax errors in the parser? This is a difficult question. The solution that we come up with in this implementation is to (essentially) enter a panic mode when we encounter a syntax error and continue in this error state until we complete the current statement. This is an intuitive solution because we suspect that syntax errors are contained to a single line? What are alternatives to this approach? For instance, would there be a way to recover sooner than at the end of the statement?
 
 **Evaluting Expressions**
 
