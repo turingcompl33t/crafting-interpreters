@@ -18,3 +18,42 @@ Cons:
 A suggested optimization is run-length encoding. Are there any other alternatives?
 
 I find myself tempted to increase the levels of abstraction in this implementation already. For instance, I don't like the fact that the `Chunk` type itself is managing its dynamic arrays (at least some of them). I want to pull the dynamic array implementation out into a separate class, write some tests for it, and only then utilize it the `Chunk` class. This is something I will do when I get to my own language implementation...
+
+**A Virtual Machine**
+
+We make an obvious design concession when we choose to use a global VM instance instead of passing a pointer to the VM around in the `vm` module. If I were writing this in C++, would I implement this as a stateful class with instance methods?
+
+We store the instruction pointer for the VM as part of the `vm` structure. The author notes that if we wanted better performance, we would actually pass this value around to each interpretation function in order to allow the C compiler to take advantage of registers more effectively (also a locality concern?).
+
+Our virtual machine run loop is pretty simple. The alternative approaches to doing this are worth taking a look at:
+- Direct threaded
+- Indirect threaded
+- etc.
+
+The simplicity of the virtual machine implementation is also its virtue - the less work it does, or the less overhead it imposes over the code itself, the faster it can do it!
+
+The concept of distinguishing between operations that accept operands and instructions that accept operands. For instance, the `OP_CONSTANT` instruction accepts an operand that tells it the index in the constant pool to read. In contrast, the instructions that implement binary arithmetic do not take any operands - instead they always look for both of their operands at the top of the runtime stack.
+
+Is there latitude here for choosing? I suppose this would not be possible to encode the operand values for the binary operators directly into the instruction because the value is not known at compile time! This is the beauty of the stack-based virtual machine.
+
+"That is the magic of the stack. It lets us freely compose instructions without them needed any complexity or awareness of data flow."
+
+The choice of a stack-based virtual machine over a register-based implementation is another important design decision that comes out of this chapter. The difference I noted above is a result of the stack based VM rather than a register-based VM. The `add` instruction is a nice example of this:
+
+In a stack-based VM:
+
+```
+load <a>   // Read local a and push onto stack
+load <b>   // Read local b and push onto stack
+add        // Perform addition, push result onto stack
+store <c>  // Read the value at the top of stack, store in local c
+```
+
+In a register-based VM:
+
+```
+// Read the operands at <a> and <b>, store the result in <c>
+add <a> <b> <c>
+```
+
+The author calls out the paper [The Implementation of Lua 5.0](https://www.lua.org/doc/jucs05.pdf) as an example of a case study in transitioning from a stack-based VM to a register-based implementation.
