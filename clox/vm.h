@@ -48,10 +48,10 @@ void freeVM();
 
 /**
  * Interpret a chunk of bytecode on the virtual machine.
- * @param chunk The chunk to interpret
+ * @param source The Lox source to interpret
  * @return The result of interpretation
  */
-InterpretResult interpret(Chunk* chunk);
+InterpretResult interpret(const char* source);
 
 /**
  * Push a value onto the runtime stack.
