@@ -67,3 +67,11 @@ The big design feature in this chapter is the fact that (as the title suggests) 
 The use of a single-pass compiler implementation. This is in contrast to a multi-pass approach in which we first generate the AST (completely) and then use the completed AST to generate bytecode. Instead, we simply generate bytecode on the fly as we construct the AST.
 
 The Pratt parsing technique. Did not make sense to me initially, but after walking through some examples, it is beautiful. Use the `-1 + 2` example from the source.
+
+Think about it in terms of binding power instead of precedence. Reference [this post](https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html). Original paper from Pratt is [here](https://web.archive.org/web/20151223215421/http://hall.org.ua/halls/wizzard/pdf/Vaughan.Pratt.TDOP.pdf).
+
+**Types of Values**
+
+The idea of representing Lox values in C.
+
+Another important concept from this chapter is the idea of translating the user's source code to the virtual machine bytecode instruction set. We do not necessarily need an bytecode instruction for each of the operations in the user's source code, but rather just a way to model the computation on our virtual machine. Example in this chapter is the use of OP_GREATER and OP_NOT to implement OP_LESS_EQUAL, and vice versa for OP_GREATER_EQUAL. Keeps the instruction set smaller and the code somewhat simpler, at the cost of potential performance?

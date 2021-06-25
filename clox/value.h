@@ -7,7 +7,40 @@
 
 #include "common.h"
 
-typedef double Value;
+/**
+ * ValueType enumerates all of the types of values
+ * supported natively by the clox VM.
+ */
+typedef enum {
+  VAL_BOOL,
+  VAL_NIL,
+  VAL_NUMBER
+} ValueType;
+
+/**
+ * The Value type abstracts over the notion of native
+ * runtime values in the clox VM.
+ */
+typedef struct {
+  /** The type of the value */
+  ValueType type;
+  /** The storage for the underlying value */
+  union {
+    bool boolean;
+    double number;
+  } as;
+} Value;
+
+#define BOOL_VAL(value)    ((Value){VAL_BOOL, {.boolean=value}})
+#define NIL_VAL            ((Value){VAL_NIL, {.number = 0}})
+#define NUMBER_VAL(value)  ((Value){VAL_NUMBER, {.number = value}})
+
+#define AS_BOOL(value)   ((value).as.boolean)
+#define AS_NUMBER(value) ((value).as.number)
+
+#define IS_BOOL(value)   ((value).type == VAL_BOOL)
+#define IS_NIL(value)    ((value).type == VAL_NIL)
+#define IS_NUMBER(value) ((value).type == VAL_NUMBER)
 
 typedef struct {
   /** The current number of values in the array */
@@ -42,5 +75,13 @@ void writeValueArray(ValueArray* array, Value value);
  * @param value The value
  */
 void printValue(Value value);
+
+/**
+ * Determine if two values are equal.
+ * @param a Input value
+ * @param b Input value
+ * @return `true` if `a` and `b` are equal, `false` otherwise
+ */
+bool valueEquals(Value a, Value b);
 
 #endif // CLOX_VALUE_H

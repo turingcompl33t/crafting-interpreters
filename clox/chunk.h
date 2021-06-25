@@ -14,13 +14,27 @@
 typedef enum {
   /** Load a constant from the constant pool */
   OP_CONSTANT,
+
+  /** Load constant literals */
+  OP_NIL,
+  OP_TRUE,
+  OP_FALSE,
+
+  /** Equality and comparison operators */
+  OP_EQUAL,
+  OP_GREATER,
+  OP_LESS,
+
   /** Binary arithmetic operators */
   OP_ADD,
   OP_SUBTRACT,
   OP_MULTIPLY,
   OP_DIVIDE,
+
   /** Unary negation */
+  OP_NOT,
   OP_NEGATE,
+  
   /** Return from a subroutine */
   OP_RETURN,
 } OpCode;
