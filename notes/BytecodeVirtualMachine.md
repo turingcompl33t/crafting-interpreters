@@ -65,3 +65,5 @@ The big design feature in this chapter is the fact that (as the title suggests) 
 **Compiling Expressions**
 
 The use of a single-pass compiler implementation. This is in contrast to a multi-pass approach in which we first generate the AST (completely) and then use the completed AST to generate bytecode. Instead, we simply generate bytecode on the fly as we construct the AST.
+
+The Pratt parsing technique. Did not make sense to me initially, but after walking through some examples, it is beautiful. Use the `-1 + 2` example from the source.
