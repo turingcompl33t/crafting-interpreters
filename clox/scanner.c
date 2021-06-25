@@ -20,11 +20,19 @@ typedef struct {
 // The global scanner for the module
 Scanner scanner;
 
+// ----------------------------------------------------------------------------
+// Scanner Lifetime
+// ----------------------------------------------------------------------------
+
 void initScanner(const char* source) {
   scanner.start = source;
   scanner.current = source;
   scanner.line = 1;
 }
+
+// ----------------------------------------------------------------------------
+// scanToken() Low-Level Utilities
+// ----------------------------------------------------------------------------
 
 /**
  * Determine if we have reached the end of the input program.
@@ -83,6 +91,11 @@ static bool isDigit(char c) {
   return c >= '0' && c <= '9';
 }
 
+/**
+ * Determine if the character is alphabetical.
+ * @param c The character
+ * @return `true` if `c` is ASCII alphabetical, `false` otherwise
+ */
 static bool isAlpha(char c) {
   return (c >= 'a' && c <= 'z') || 
          (c >= 'A' && c <= 'z') || 
@@ -152,40 +165,9 @@ static Token errorToken(const char* message) {
   return token;
 }
 
-/**
- * Scan a string literal from the program source.
- * @return The string token
- */
-static Token string() {
-  while (peek() != '"' && !isAtEnd()) {
-    if (peek() == '\n') scanner.line++;
-    advance();
-  }
-  
-  if (isAtEnd()) return errorToken("Unterminated string.");
-  
-  // Consume the closing '"'
-  advance();
-  return makeToken(TOKEN_STRING);
-}
-
-/**
- * Scan a numeric literal from the program source.
- * @return The number token
- */
-static Token number() {
-  // Consume all leading digits
-  while (isDigit(peek())) advance();
-
-  // Check for the decimal point
-  if (peek() == '.' && isDigit(peekNext())) {
-    // Consume the decimal point
-    advance();
-    // Consume all digits beyond the decimal
-    while (isDigit(peek())) advance();
-  }
-  return makeToken(TOKEN_NUMBER);
-}
+// ----------------------------------------------------------------------------
+// scanToken() High-Level Utilities
+// ----------------------------------------------------------------------------
 
 /**
  * Determine if the remainder of the current lexeme
@@ -216,6 +198,9 @@ static TokenType checkKeyword(int start, int length, const char* rest, TokenType
  * @return The type type
  */
 static TokenType identifierType() {
+  // NOTE: Here, we implement a (very) ad-hoc trie
+  // data structure that we probe to determine if
+  // an identifier is a reserved keyword
   switch (scanner.start[0]) {
     case 'a': return checkKeyword(1, 2, "nd", TOKEN_AND);
     case 'c': return checkKeyword(1, 4, "lass", TOKEN_CLASS);
@@ -255,6 +240,45 @@ static Token identifier() {
   while (isAlpha(peek()) || isDigit(peek())) advance();
   return makeToken(identifierType());
 }
+
+/**
+ * Scan a string literal from the program source.
+ * @return The string token
+ */
+static Token string() {
+  while (peek() != '"' && !isAtEnd()) {
+    if (peek() == '\n') scanner.line++;
+    advance();
+  }
+  
+  if (isAtEnd()) return errorToken("Unterminated string.");
+  
+  // Consume the closing '"'
+  advance();
+  return makeToken(TOKEN_STRING);
+}
+
+/**
+ * Scan a numeric literal from the program source.
+ * @return The number token
+ */
+static Token number() {
+  // Consume all leading digits
+  while (isDigit(peek())) advance();
+
+  // Check for the decimal point
+  if (peek() == '.' && isDigit(peekNext())) {
+    // Consume the decimal point
+    advance();
+    // Consume all digits beyond the decimal
+    while (isDigit(peek())) advance();
+  }
+  return makeToken(TOKEN_NUMBER);
+}
+
+// ----------------------------------------------------------------------------
+// Token Scanning
+// ----------------------------------------------------------------------------
 
 /**
  * Scan the next token from the program source.

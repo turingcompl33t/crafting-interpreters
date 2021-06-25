@@ -57,3 +57,11 @@ add <a> <b> <c>
 ```
 
 The author calls out the paper [The Implementation of Lua 5.0](https://www.lua.org/doc/jucs05.pdf) as an example of a case study in transitioning from a stack-based VM to a register-based implementation.
+
+**Scanning on Demand**
+
+The big design feature in this chapter is the fact that (as the title suggests) we do not scan all of the tokens in the input source ahead of time and pass these to the compiler. Instead, we expose a function that provides the next token from the source stream on-demand. This saves us the trouble of managing the memory associated with all of the tokens (making this approach more scalable). The only limitation is that we must ensure that the source string has a lifetime that lasts at least through the duration of compilation. In practice this is easy, but I am generally never a fan of coupling lifetimes across components like this.
+
+**Compiling Expressions**
+
+The use of a single-pass compiler implementation. This is in contrast to a multi-pass approach in which we first generate the AST (completely) and then use the completed AST to generate bytecode. Instead, we simply generate bytecode on the fly as we construct the AST.
