@@ -81,3 +81,13 @@ Another important concept from this chapter is the idea of translating the user'
 We adopt a two-level representation for Lox values. Small values are stored inline in the `Value` representation. In contrast, types like strings, instances, and functions will have their memory allocated on the heap and the `Value` itself will only maintain a pointer to the object itself. Thus we have two different "kinds" of types in our Lox implementation: primitive types and object types (need better identifiers here?).
 
 This was a super fun chapter. The ability to represent arbitrary object-style values in Lox is a huge addition to the language, and the choices we make here are very consequential ones for performance.
+
+**Hash Tables**
+
+I recoil a little bit from the use of a hashtable implementation that is not totally generic - we hardcode the use of Lox StringObjects as the key type in the table, and use Lox Values as the mapped value.
+
+String interning is a new concept.
+
+Thinking about what operations are common in language implementation, and how to make them fast.
+
+Why are string lookups common in Lox? Is this the case for any dynamic language?

@@ -49,6 +49,8 @@ struct StringObject {
   int length;
   /** The string character array */
   char* data;
+  /** The cached hash value for the string */
+  uint32_t hash;
 };
 
 /**

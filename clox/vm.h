@@ -6,6 +6,7 @@
 #define CLOX_VM_H
 
 #include "chunk.h"
+#include "table.h"
 #include "value.h"
 
 /** The maximum size of the clox VM runtime stack */
@@ -26,6 +27,8 @@ typedef struct {
   Value* stackTop;
   /** The head of the linked list of allocated objects */
   Object* objects;
+  /** The string-interning table */
+  Table strings;
 } VM;
 
 /**

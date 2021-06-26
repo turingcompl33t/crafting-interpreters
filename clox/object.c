@@ -7,6 +7,7 @@
 
 #include "memory.h"
 #include "object.h"
+#include "table.h"
 #include "value.h"
 #include "vm.h"
 
@@ -32,20 +33,56 @@ static Object* allocateObject(size_t size, ObjectType type) {
  * Create a new string object on the heap and initialize its fields.
  * @param data The string data
  * @param length The length of the string
+ * @param hash The string hash value
  * @return The allocated string object
  */
-static StringObject* allocateString(char* data, int length) {
+static StringObject* allocateString(char* data, int length, uint32_t hash) {
   StringObject* string = ALLOCATE_OBJECT(StringObject, OBJ_STRING);
   string->length = length;
   string->data = data;
+  string->hash = hash;
+  // Automatically intern the string in the VM string table
+  putTable(&vm.strings, string, NIL_VAL);
   return string;
 }
 
+/**
+ * Compute the FNV-1a hash of a string.
+ * @param data The string data
+ * @param length The length of the string
+ * @return The hash value
+ */
+static hashString(const char* data, int length) {
+  uint32_t hash = 2166136261U;
+  for (int i = 0; i < length; ++i) {
+    hash ^= (uint8_t)data[i];
+    hash *= 16777619;
+  }
+  return hash;
+}
+
 StringObject* takeString(char* data, int length) {
-  return allocateString(data, length);
+  uint32_t hash = hashString(data, length);
+  
+  // Search for the string in the string table;
+  // release the newly-allocated string if found
+  // and return a reference to the existing string 
+  StringObject* interned = findStringTable(&vm.strings, data, length, hash);
+  if (interned != NULL) {
+    FREE_ARRAY(char, data, length + 1);
+    return interned;
+  }
+  return allocateString(data, length, hash);
 }
 
 StringObject* copyString(const char* data, int length) {
+  uint32_t hash = hashString(data, length);
+  
+  // Search for the string in the string table;
+  // elide the allocation if the string is present
+  StringObject* interned = findStringTable(&vm.strings, data, length, hash);
+  if (interned != NULL) return interned;
+
   // Get some memory on the heap for the string data
   char* heapChars = ALLOCATE(char, length + 1);
   
@@ -55,7 +92,7 @@ StringObject* copyString(const char* data, int length) {
   
   // Allocate the associated string object and initialize
   // it to refer to the heap buffer with the copied data
-  return allocateString(heapChars, length);
+  return allocateString(heapChars, length, hash);
 }
 
 void printObject(Value value) {
