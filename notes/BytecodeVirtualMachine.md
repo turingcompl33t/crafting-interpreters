@@ -75,3 +75,9 @@ Think about it in terms of binding power instead of precedence. Reference [this 
 The idea of representing Lox values in C.
 
 Another important concept from this chapter is the idea of translating the user's source code to the virtual machine bytecode instruction set. We do not necessarily need an bytecode instruction for each of the operations in the user's source code, but rather just a way to model the computation on our virtual machine. Example in this chapter is the use of OP_GREATER and OP_NOT to implement OP_LESS_EQUAL, and vice versa for OP_GREATER_EQUAL. Keeps the instruction set smaller and the code somewhat simpler, at the cost of potential performance?
+
+**Strings**
+
+We adopt a two-level representation for Lox values. Small values are stored inline in the `Value` representation. In contrast, types like strings, instances, and functions will have their memory allocated on the heap and the `Value` itself will only maintain a pointer to the object itself. Thus we have two different "kinds" of types in our Lox implementation: primitive types and object types (need better identifiers here?).
+
+This was a super fun chapter. The ability to represent arbitrary object-style values in Lox is a huge addition to the language, and the choices we make here are very consequential ones for performance.

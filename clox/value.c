@@ -3,7 +3,9 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
+#include "object.h"
 #include "memory.h"
 #include "value.h"
 
@@ -35,6 +37,7 @@ void printValue(Value value) {
       break;
     case VAL_NIL: printf("nil"); break;
     case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
+    case VAL_OBJECT: printObject(value); break;
   }
 }
 
@@ -45,6 +48,12 @@ bool valueEquals(Value a, Value b) {
     case VAL_BOOL:   return AS_BOOL(a) == AS_BOOL(b);
     case VAL_NIL:    return true;
     case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
+    case VAL_OBJECT: {
+      StringObject* stringA = AS_STRING(a);
+      StringObject* stringB = AS_STRING(b);
+      return stringA->length == stringB->length &&
+        memcmp(stringA->data, stringB->data, stringA->length) == 0;
+    }
     default:         return false; // Unreachable
   }
 }

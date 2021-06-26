@@ -246,6 +246,15 @@ static void number() {
 }
 
 /**
+ * Emit the bytecode to load a string literal into the bytecode stream.
+ */
+static void string() {
+  emitConstant(
+    OBJECT_VAL(
+      copyString(parser.previous.start + 1, parser.previous.length - 2)));
+}
+
+/**
  * Emit the bytecode to evaluate a unary 
  * expression into the bytecode stream.
  */
@@ -355,7 +364,7 @@ ParseRule rules[] = {
   [TOKEN_LESS]          = {NULL,     binary, PREC_EQUALITY},
   [TOKEN_LESS_EQUAL]    = {NULL,     binary, PREC_EQUALITY},
   [TOKEN_IDENTIFIER]    = {NULL,     NULL,   PREC_NONE},
-  [TOKEN_STRING]        = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_STRING]        = {string,   NULL,   PREC_NONE},
   [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
   [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
   [TOKEN_CLASS]         = {NULL,     NULL,   PREC_NONE},

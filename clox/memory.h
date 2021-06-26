@@ -6,6 +6,12 @@
 #define CLOX_MEMORY_H
 
 #include "common.h"
+#include "object.h"
+
+#define ALLOCATE(type, count) \
+  (type*)reallocate(NULL, 0, sizeof(type) * (count))
+
+#define FREE(type, pointer) reallocate(pointer, sizeof(type), 0)
 
 #define GROW_CAPACITY(capacity) \
   ((capacity) < 8 ? 8 : (capacity) * 2)
@@ -25,5 +31,10 @@
  * @return The memory block (if not free())
  */
 void* reallocate(void* ptr, size_t oldSize, size_t newSize);
+
+/**
+ * Release the memory for ALL allocated Lox objects.
+ */
+void freeObjects();
 
 #endif // CLOX_MEMORY_H

@@ -4,14 +4,17 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
+#include "object.h"
+#include "memory.h"
 #include "vm.h"
 
-// The global virtual machine instance
-static VM vm;
+/** The global virtual machine instance */
+VM vm;
 
 /**
  * Reset the stack pointer.
@@ -53,10 +56,11 @@ static void runtimeError(const char* format, ...) {
 
 void initVM() {
   resetStack();
+  vm.objects = NULL;
 }
 
 void freeVM() {
-
+  freeObjects();
 }
 
 void push(Value value) {
@@ -85,6 +89,20 @@ static Value peek(int distance) {
  */
 static bool isFalsey(Value value) {
   return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
+static void concatenate() {
+  StringObject* b = AS_STRING(pop());
+  StringObject* a = AS_STRING(pop());
+
+  int length = a->length + b->length;
+  char* data = ALLOCATE(char, length + 1);
+  memcpy(data, a->data, a->length);
+  memcpy(data + a->length, b->data, b->length);
+  data[length] = '\0';
+
+  StringObject* result = takeString(data, length);
+  push(OBJECT_VAL(result));
 }
 
 /**
@@ -130,7 +148,20 @@ static InterpretResult run() {
       case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
       case OP_LESS:    BINARY_OP(BOOL_VAL, <); break;
 
-      case OP_ADD:       BINARY_OP(NUMBER_VAL, +); break;
+      case OP_ADD: { 
+        if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
+          concatenate();
+        } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+          double b = AS_NUMBER(pop());
+          double a = AS_NUMBER(pop());
+          push(NUMBER_VAL(a + b));
+        } else {
+          runtimeError("Operands for operator '+' not supported.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        break;
+      }
+
       case OP_SUBTRACT:  BINARY_OP(NUMBER_VAL, -); break;
       case OP_MULTIPLY:  BINARY_OP(NUMBER_VAL, *); break;
       case OP_DIVIDE:    BINARY_OP(NUMBER_VAL, /); break;

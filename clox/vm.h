@@ -24,6 +24,8 @@ typedef struct {
   Value stack[STACK_MAX];
   /** A pointer to the top of the stack (one past the final element)*/
   Value* stackTop;
+  /** The head of the linked list of allocated objects */
+  Object* objects;
 } VM;
 
 /**
@@ -35,6 +37,9 @@ typedef enum {
   INTERPRET_COMPILE_ERROR,
   INTERPRET_RUNTIME_ERROR
 } InterpretResult;
+
+/** Expose the global VM instance externally */
+extern VM vm;
 
 /**
  * Initialize the virtual machine.
