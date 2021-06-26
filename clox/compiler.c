@@ -161,6 +161,27 @@ static void consume(TokenType type, const char* message) {
   errorAtCurrent(message);
 }
 
+/**
+ * Determine if the current token matches the specified type.
+ * @param type The token type of interest
+ * @return `true` if the current token matches, `false` otherwise
+ */
+static bool check(TokenType type) {
+  return parser.current.type == type;
+}
+
+/**
+ * Determine if the current token matches the specified
+ * type; if so, consume the current token.
+ * @param type The token type of interest
+ * @return `true` if the current token matches, `false` otherwise
+ */
+static bool match(TokenType type) {
+  if (!check(type)) return false;
+  advance();
+  return true;
+}
+
 // ----------------------------------------------------------------------------
 // Bytecode Generation
 // ----------------------------------------------------------------------------
@@ -455,6 +476,41 @@ static ParseRule* getRule(TokenType type) {
 }
 
 // ----------------------------------------------------------------------------
+// Statements
+// ----------------------------------------------------------------------------
+
+/**
+ * Emit the bytecode for a print statement into the bytecode stream.
+ */
+static void printStatement() {
+  // The TOKEN_PRINT token is already consumed
+  // prior to the call into this function
+  expression();
+  consume(TOKEN_SEMICOLON, "Expect ';' after value.");
+  emitByte(OP_PRINT);
+}
+
+/** Forward declarations for statement productions */
+static void statement();
+static void declaration();
+
+/**
+ * Emit the bytecode for a statement into the bytecode stream.
+ */
+static void statement() {
+  if (match(TOKEN_PRINT)) {
+    printStatement();
+  }
+}
+
+/**
+ * Emit the bytecode for a declaration into the bytecode stream. 
+ */
+static void declaration() {
+  statement();
+}
+
+// ----------------------------------------------------------------------------
 // Compilation Interface
 // ----------------------------------------------------------------------------
 
@@ -466,7 +522,10 @@ bool compile(const char* source, Chunk* chunk) {
   parser.panicMode = false;
 
   advance();
-  expression();
+
+  while (!match(TOKEN_EOF)) {
+    declaration();
+  }
 
   consume(TOKEN_EOF, "Expect end of expression.");
   endCompiler();

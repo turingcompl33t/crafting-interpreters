@@ -34,6 +34,9 @@ typedef enum {
   /** Unary negation */
   OP_NOT,
   OP_NEGATE,
+
+  /** Print statement */
+  OP_PRINT,
   
   /** Return from a subroutine */
   OP_RETURN,

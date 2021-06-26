@@ -91,3 +91,7 @@ String interning is a new concept.
 Thinking about what operations are common in language implementation, and how to make them fast.
 
 Why are string lookups common in Lox? Is this the case for any dynamic language?
+
+**Global Variables**
+
+The idea of multiple implementation strategies for the same high-level feature based on the level of optimization required.
