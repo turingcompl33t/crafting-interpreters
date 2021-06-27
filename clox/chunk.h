@@ -23,7 +23,11 @@ typedef enum {
   /** Explicit stack management */
   OP_POP,
 
-  /** Variable definition */
+  /** Local variable management */
+  OP_GET_LOCAL,
+  OP_SET_LOCAL,
+
+  /** Global variable management */
   OP_GET_GLOBAL,
   OP_SET_GLOBAL,
   OP_DEFINE_GLOBAL,

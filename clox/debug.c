@@ -11,6 +11,13 @@
 // Local
 // ----------------------------------------------------------------------------
 
+/**
+ * Print a constant instruction to standard output.
+ * @param name The instruction name
+ * @param chunk The instruction's chunk
+ * @param offset The offset at which the instruction appears in the chunk
+ * @return The updated offset
+ */
 static int constantInstruction(const char* name, Chunk* chunk, int offset) {
   // Grab the offset into the constant pool
   uint8_t constant = chunk->code[offset + 1];
@@ -21,9 +28,28 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset) {
   return offset + 2;
 }
 
+/**
+ * Print a simple instruction to standard output.
+ * @param name The instruction name
+ * @param offset The offset at which the instruction appears in the chunk
+ * @return The updated offset
+ */
 static int simpleInstruction(const char* name, int offset) {
   printf("%s\n", name);
   return offset + 1;
+}
+
+/**
+ * Print a byte instruction to standard output.
+ * @param name The instruction name
+ * @param chunk The instruction's chunk
+ * @param offset The offset at which the instruction appears in the chunk
+ * @return The updated offset
+ */
+static int byteInstruction(const char* name, Chunk* chunk, int offset) {
+  uint8_t slot = chunk->code[offset + 1];
+  printf("%-16s %4d\n", name, slot);
+  return offset + 2;
 }
 
 // ----------------------------------------------------------------------------
@@ -61,6 +87,10 @@ int disassembleInstruction(Chunk* chunk, int offset) {
       return simpleInstruction("OP_FALSE", offset);
     case OP_POP:
       return simpleInstruction("OP_POP", offset);
+    case OP_GET_LOCAL:
+      return byteInstruction("OP_GET_LOCAL", chunk, offset);
+    case OP_SET_LOCAL:
+      return byteInstruction("OP_SET_LOCAL", chunk, offset);
     case OP_GET_GLOBAL:
       return constantInstruction("OP_GET_GLOBAL", chunk, offset);
     case OP_SET_GLOBAL:

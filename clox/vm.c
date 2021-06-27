@@ -146,6 +146,21 @@ static InterpretResult run() {
 
       case OP_POP: pop(); break;
 
+      case OP_GET_LOCAL: {
+        // Push the local variable onto the top of the runtime stack
+        uint8_t slot = READ_BYTE();
+        push(vm.stack[slot]);
+        break;
+      }
+      case OP_SET_LOCAL: {
+        // Read the local slot from the bytecode and set
+        // the value of the local to the value that is
+        // currently located at the top of the stack
+        uint8_t slot = READ_BYTE();
+        vm.stack[slot] = peek(0);
+        break;
+      }
+
       case OP_GET_GLOBAL: {
         // Load the value for a global variable
         StringObject* name = READ_STRING();

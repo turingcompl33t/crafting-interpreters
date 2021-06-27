@@ -15,4 +15,6 @@
 // Denotes whether the contents of the chunk are printed after compilation
 #define DEBUG_PRINT_CODE
 
+#define UINT8_COUNT (UINT8_MAX + 1)
+
 #endif // CLOX_COMMON_H

@@ -97,3 +97,15 @@ Why are string lookups common in Lox? Is this the case for any dynamic language?
 The idea of multiple implementation strategies for the same high-level feature based on the level of optimization required.
 
 Global variables are looked up by name at runtime.
+
+**Local Variables**
+
+Global variables and local variables are implemented differently in clox. Global variables are "late bound" - they are looked up at compile time in our hash tables. This is simple, but slow.
+
+In contrast, our implementation of locals will rely on doing more work up front in the compiler. We go beyond simply storing the values on the stack at runtime though. We can do even more by noting that we will known exactly where each local and function argument will live on the stack at compile time, so we can use an index into the stack as a reference to a local variable during compilation when we want to use the variable as an operand.
+
+General principle: pulling work forward into the compiler to remove runtime overhead.
+
+A complete high-level description of the implementation of local variables in clox is as follows:
+
+TODO

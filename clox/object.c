@@ -52,7 +52,7 @@ static StringObject* allocateString(char* data, int length, uint32_t hash) {
  * @param length The length of the string
  * @return The hash value
  */
-static hashString(const char* data, int length) {
+static uint32_t hashString(const char* data, int length) {
   uint32_t hash = 2166136261U;
   for (int i = 0; i < length; ++i) {
     hash ^= (uint8_t)data[i];
