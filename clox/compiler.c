@@ -51,7 +51,7 @@ typedef enum {
 /**
  * The signature for a parser callback.
  */
-typedef void (*ParseFn)();
+typedef void (*ParseFn)(bool canAssign);
 
 /**
  * A ParseRule tells us, given a token type:
@@ -202,6 +202,16 @@ static uint8_t makeConstant(Value value) {
 }
 
 /**
+ * Make an identifier (string) constant for the specified token.
+ * @param name The token the specifies the identifier name
+ * @return The index in the constant pool at which
+ * the allocated identifier constant is located
+ */
+static uint8_t identifierConstant(Token* name) {
+  return makeConstant(OBJECT_VAL(copyString(name->start, name->length)));
+}
+
+/**
  * Emit a byte into the bytecode stream.
  * @param byte The byte
  */
@@ -250,6 +260,37 @@ static void endCompiler() {
 }
 
 // ----------------------------------------------------------------------------
+// Statements
+// ----------------------------------------------------------------------------
+
+/**
+ * Synchronize the parser and compiler state after a panic.
+ */
+static void synchronize() {
+  parser.panicMode = false;
+  // Consume tokens until we hit something
+  // that looks like a statement boundary
+  while (parser.current.type != TOKEN_EOF) {
+    if (parser.previous.type == TOKEN_SEMICOLON) return;
+    switch (parser.current.type) {
+      case TOKEN_CLASS:
+      case TOKEN_FUN:
+      case TOKEN_VAR:
+      case TOKEN_FOR:
+      case TOKEN_IF:
+      case TOKEN_WHILE:
+      case TOKEN_PRINT:
+      case TOKEN_RETURN:
+        return;
+      default:
+        ; // Do nothing
+    }
+
+    advance();
+  }
+}
+
+// ----------------------------------------------------------------------------
 // Pratt Parser
 // ----------------------------------------------------------------------------
 
@@ -260,26 +301,55 @@ static void parsePrecedence(Precedence precedence);
 
 /**
  * Emit the bytecode to load a number literal into the bytecode stream.
+ * @param canAssign Ignored
  */
-static void number() {
+static void number(bool canAssign) {
   double value = strtod(parser.previous.start, NULL);
   emitConstant(NUMBER_VAL(value));
 }
 
 /**
  * Emit the bytecode to load a string literal into the bytecode stream.
+ * @param canAssign Ignored
  */
-static void string() {
+static void string(bool canAssign) {
   emitConstant(
     OBJECT_VAL(
       copyString(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
 /**
+ * Emit the bytecode to load a named variable into the bytecode stream.
+ * @param name The name of the variable
+ * @param canAssign `true` if the variable being parsed can
+ * be assigned to, `false` otherwise
+ */
+static void namedVariable(Token name, bool canAssign) {
+  uint8_t arg = identifierConstant(&name);
+  if (canAssign && match(TOKEN_EQUAL)) {
+    expression();
+    emitBytes(OP_SET_GLOBAL, arg);
+  } else {
+    emitBytes(OP_GET_GLOBAL, arg);
+
+  }
+}
+
+/**
+ * Emit the bytecode to load variable into the bytecode stream.
+ * @param canAssign `true` if the variable being parsed can
+ * be assigned to, `false` otherwise
+ */
+static void variable(bool canAssign) {
+  namedVariable(parser.previous, canAssign);
+}
+
+/**
  * Emit the bytecode to evaluate a unary 
  * expression into the bytecode stream.
+ * @param canAssign Ignored
  */
-static void unary() {
+static void unary(bool canAssign) {
   // The leading token has been consumed
   TokenType operatorType = parser.previous.type;
 
@@ -301,8 +371,9 @@ static void unary() {
 /**
  * Emit the bytecode to evaluate a binary
  * expression into the bytecode stream.
+ * @param canAssign Ignored
  */
-static void binary() {
+static void binary(bool canAssign) {
   TokenType operatorType = parser.previous.type;
   ParseRule* rule = getRule(operatorType);
   parsePrecedence((Precedence)(rule->precedence + 1));
@@ -329,8 +400,9 @@ static void binary() {
 /**
  * Emit the bytecode to evaluate a grouping 
  * expression into the bytecode stream.
+ * @param canAssign Ignored
  */
-static void grouping() {
+static void grouping(bool canAssign) {
   // NOTE: A grouping expression is purely a syntactic
   // construct - it has no runtime semantics, so as far
   // as the backend (bytecode generation) is concerned,
@@ -344,8 +416,9 @@ static void grouping() {
 /**
  * Emit the bytecode to evaluate a literal expression
  * into the bytecode stream.
+ * @param canAssign Ignored
  */
-static void literal() {
+static void literal(bool canAssign) {
   switch (parser.previous.type) {
     case TOKEN_FALSE: emitByte(OP_FALSE); break;
     case TOKEN_TRUE:  emitByte(OP_TRUE); break;
@@ -384,7 +457,7 @@ ParseRule rules[] = {
   [TOKEN_GREATER_EQUAL] = {NULL,     binary, PREC_EQUALITY},
   [TOKEN_LESS]          = {NULL,     binary, PREC_EQUALITY},
   [TOKEN_LESS_EQUAL]    = {NULL,     binary, PREC_EQUALITY},
-  [TOKEN_IDENTIFIER]    = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_IDENTIFIER]    = {variable, NULL,   PREC_NONE},
   [TOKEN_STRING]        = {string,   NULL,   PREC_NONE},
   [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
   [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
@@ -440,7 +513,8 @@ static void parsePrecedence(Precedence precedence) {
     return;
   }
 
-  prefixRule();
+  bool canAssign = (precedence <= PREC_ASSIGNMENT);
+  prefixRule(canAssign);
 
   // The parsing algorithm continues so long as the specified
   // precedence is less or equal to the precendece of the parse
@@ -462,7 +536,11 @@ static void parsePrecedence(Precedence precedence) {
   while (precedence <= getRule(parser.current.type)->precedence) {
     advance();
     ParseFn infixRule = getRule(parser.previous.type)->infix;
-    infixRule();
+    infixRule(canAssign);
+  }
+
+  if (canAssign && match(TOKEN_EQUAL)) {
+    error("Invalid assignment target.");
   }
 }
 
@@ -479,6 +557,30 @@ static ParseRule* getRule(TokenType type) {
 // Statements
 // ----------------------------------------------------------------------------
 
+/** Forward declarations for statement productions */
+static void statement();
+static void declaration();
+
+/**
+ * Parse a variable name and create a constant
+ * value entry for the named variable.
+ * @param errorMessage The error message to report
+ * @return The index in the constant pool at which
+ * the allocated identifier constant is located
+ */
+static uint8_t parseVariable(const char* errorMessage) {
+  consume(TOKEN_IDENTIFIER, errorMessage);
+  return identifierConstant(&parser.previous);
+}
+
+/**
+ * Emit the bytecode to define a global variable into the bytecode stream.
+ * @param global The index of the global in the constant pool
+ */
+static void defineVariable(uint8_t global) {
+  emitBytes(OP_DEFINE_GLOBAL, global);
+}
+
 /**
  * Emit the bytecode for a print statement into the bytecode stream.
  */
@@ -490,9 +592,42 @@ static void printStatement() {
   emitByte(OP_PRINT);
 }
 
-/** Forward declarations for statement productions */
-static void statement();
-static void declaration();
+/**
+ * Emit the bytecode for an expression statement into the bytecode stream.
+ */
+static void expressionStatement() {
+  // Semantically, an expression statement evaluates the
+  // expression and discards the result
+  expression();
+  consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+  emitByte(OP_POP);
+}
+
+/**
+ * Emit the bytecode for a variable declaration into the bytecode stream.
+ */
+static void varDeclaration() {
+  // Variable declaration proceeds in 3 high-level steps:
+  //  1. Parse the variable identifier and add it to the constant pool
+  //  2. Parse the initializer; emit the bytecode to push the result of 
+  //     the initializer expression onto the top of the stack
+  //  3. Emit the bytecode to define the variable itself
+  //
+  // After compilation, at runtime, this means that we can get the
+  // name of the variable from the constant pool (index is encoded)
+  // directly into the instruction) and then look at the top of the
+  // stack to locate the initializer value for the variable
+
+  uint8_t global = parseVariable("Expect variable name.");
+  if (match(TOKEN_EQUAL)) {
+    expression();
+  } else {
+    emitByte(OP_NIL);
+  }
+
+  consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+  defineVariable(global);
+}
 
 /**
  * Emit the bytecode for a statement into the bytecode stream.
@@ -500,6 +635,8 @@ static void declaration();
 static void statement() {
   if (match(TOKEN_PRINT)) {
     printStatement();
+  } else {
+    expressionStatement();
   }
 }
 
@@ -507,7 +644,15 @@ static void statement() {
  * Emit the bytecode for a declaration into the bytecode stream. 
  */
 static void declaration() {
-  statement();
+  if (match(TOKEN_VAR)) {
+    varDeclaration();
+  } else {
+    statement();
+  }
+
+  // If we hit a compilation error while compiling
+  // a declaration, synchronize the compiler
+  if (parser.panicMode) synchronize();
 }
 
 // ----------------------------------------------------------------------------

@@ -56,11 +56,13 @@ static void runtimeError(const char* format, ...) {
 
 void initVM() {
   resetStack();
+  initTable(&vm.globals);
   initTable(&vm.strings);
   vm.objects = NULL;
 }
 
 void freeVM() {
+  freeTable(&vm.globals);
   freeTable(&vm.strings);
   freeObjects();
 }
@@ -114,6 +116,7 @@ static void concatenate() {
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+#define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op)                                     \
   do {                                                               \
     if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                \
@@ -140,6 +143,40 @@ static InterpretResult run() {
       case OP_NIL:   push(NIL_VAL); break;
       case OP_TRUE:  push(BOOL_VAL(true)); break;
       case OP_FALSE: push(BOOL_VAL(false)); break;
+
+      case OP_POP: pop(); break;
+
+      case OP_GET_GLOBAL: {
+        // Load the value for a global variable
+        StringObject* name = READ_STRING();
+        Value value;
+        if (!getTable(&vm.globals, name, &value)) {
+          runtimeError("Undefined variable '%s'.", name->data);
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        push(value);
+        break;
+      }
+      case OP_SET_GLOBAL: {
+        StringObject* name = READ_STRING();
+        // putTable() returns `true` if a new entry is added;
+        // in the case of assignment, this is a runtime error
+        if (putTable(&vm.globals, name, peek(0))) {
+          delTable(&vm.globals, name);
+          runtimeError("Undefined variable '%s'.", name->data);
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        break;
+      }
+      case OP_DEFINE_GLOBAL: {
+        // Get the name of the variable from the constant table
+        StringObject* name = READ_STRING();
+        // Add the variable to the globals table with the name
+        // as the key and the value as the value
+        putTable(&vm.globals, name, peek(0));
+        pop();
+        break;
+      }
 
       case OP_EQUAL: {
         Value b = pop();
@@ -196,6 +233,7 @@ static InterpretResult run() {
 #undef BINARY_OP
 #undef READ_BYTE
 #undef READ_CONSTANT
+#undef READ_STRING
 }
 
 InterpretResult interpret(const char* source) {

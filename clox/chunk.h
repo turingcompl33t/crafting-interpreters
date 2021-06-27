@@ -20,6 +20,14 @@ typedef enum {
   OP_TRUE,
   OP_FALSE,
 
+  /** Explicit stack management */
+  OP_POP,
+
+  /** Variable definition */
+  OP_GET_GLOBAL,
+  OP_SET_GLOBAL,
+  OP_DEFINE_GLOBAL,
+
   /** Equality and comparison operators */
   OP_EQUAL,
   OP_GREATER,

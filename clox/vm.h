@@ -27,6 +27,8 @@ typedef struct {
   Value* stackTop;
   /** The head of the linked list of allocated objects */
   Object* objects;
+  /** Global variables */
+  Table globals;
   /** The string-interning table */
   Table strings;
 } VM;

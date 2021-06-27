@@ -95,3 +95,5 @@ Why are string lookups common in Lox? Is this the case for any dynamic language?
 **Global Variables**
 
 The idea of multiple implementation strategies for the same high-level feature based on the level of optimization required.
+
+Global variables are looked up by name at runtime.
