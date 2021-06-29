@@ -852,66 +852,6 @@ static void printStatement() {
 }
 
 /**
- * Emit the bytecode for a conditional branch into the bytecode stream.
- */
-static void ifStatement() {
-  // Compile the expression for the condition; the result
-  // of evaluting this expression is left at the stack top
-  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
-  expression();
-  consume(TOKEN_RIGHT_PAREN, "Expect ')' after 'if'.");
-
-  // Emit the jump bytecode first with a dummy jump offset;
-  // track the location of the jump so we can patch later
-  int thenJump = emitJump(OP_JUMP_IF_FALSE);
-  // Emit the instruction to pop the condition result
-  // from the stack at the start of the 'then' branch
-  emitByte(OP_POP);
-  statement();
-
-  // Emit a jump to skip over the 'else' branch at the 
-  // end of the 'then' branch
-  int elseJump = emitJump(OP_JUMP);
-
-  // Backpatch the correct jump target
-  patchJump(thenJump);
-
-  // Emit the instruction to pop the condition result
-  // from, the stack at the start of the 'else' branch
-  emitByte(OP_POP);
-
-  // If an 'else' branch is present, compile it
-  if (match(TOKEN_ELSE)) statement();
-
-  // Finally, path the unconditional 'else' jump
-  patchJump(elseJump);
-}
-
-static void whileStatement() {
-  // Capture the loop start location in bytecode
-  int loopStart = currentChunk()->count;
-  
-  // Emit the code to evaluate the loop condition
-  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
-  expression();
-  consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
-
-  // Emit the jump to break out of the loop if condition is falsey
-  int exitJump = emitJump(OP_JUMP_IF_FALSE);
-  // Emit the pop to remove the evaluation of condition from stack
-  emitByte(OP_POP);
-  // Emit the code for the loop body
-  statement();
-  // Emit the jump to the loop header
-  emitLoop(loopStart);
-
-  // Patch the jump target for exiting the loop
-  patchJump(exitJump);
-  // Emit the pop for the loop body statement
-  emitByte(OP_POP);
-}
-
-/**
  * Emit the bytecode for a block statement into the bytecode stream.
  */
 static void block() {
@@ -958,6 +898,131 @@ static void varDeclaration() {
   defineVariable(global);
 }
 
+
+/**
+ * Emit the bytecode for a conditional branch into the bytecode stream.
+ */
+static void ifStatement() {
+  // Compile the expression for the condition; the result
+  // of evaluting this expression is left at the stack top
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after 'if'.");
+
+  // Emit the jump bytecode first with a dummy jump offset;
+  // track the location of the jump so we can patch later
+  int thenJump = emitJump(OP_JUMP_IF_FALSE);
+  // Emit the instruction to pop the condition result
+  // from the stack at the start of the 'then' branch
+  emitByte(OP_POP);
+  statement();
+
+  // Emit a jump to skip over the 'else' branch at the 
+  // end of the 'then' branch
+  int elseJump = emitJump(OP_JUMP);
+
+  // Backpatch the correct jump target
+  patchJump(thenJump);
+
+  // Emit the instruction to pop the condition result
+  // from, the stack at the start of the 'else' branch
+  emitByte(OP_POP);
+
+  // If an 'else' branch is present, compile it
+  if (match(TOKEN_ELSE)) statement();
+
+  // Finally, path the unconditional 'else' jump
+  patchJump(elseJump);
+}
+
+/**
+ * Emit the bytecode for a `while`-loop into the bytecode stream.
+ */
+static void whileStatement() {
+  // Capture the loop start location in bytecode
+  int loopStart = currentChunk()->count;
+  
+  // Emit the code to evaluate the loop condition
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+  // Emit the jump to break out of the loop if condition is falsey
+  int exitJump = emitJump(OP_JUMP_IF_FALSE);
+  // Emit the pop to remove the evaluation of condition from stack
+  emitByte(OP_POP);
+  // Emit the code for the loop body
+  statement();
+  // Emit the jump to the loop header
+  emitLoop(loopStart);
+
+  // Patch the jump target for exiting the loop
+  patchJump(exitJump);
+  // Emit the pop for the loop body statement
+  emitByte(OP_POP);
+}
+
+/**
+ * Eit the bytecode for a `for`-loop into the bytecode stream.
+ */
+static void forStatement() {
+  // Need to manually manage scopes to ensure that variable
+  // declared in the initializer is scoped to loop body
+  beginScope();
+  
+  consume(TOKEN_LEFT_PAREN, "Expect'(' after 'for'.");
+  
+  // Initializer clause
+  if (match(TOKEN_SEMICOLON)) {
+    // No initializer provided
+  } else if (match(TOKEN_VAR)) {
+    varDeclaration();
+  } else {
+    expressionStatement();
+  }
+
+  // Loop condition
+  int loopStart = currentChunk()->count;
+  int exitJump = -1;
+  if (!match(TOKEN_SEMICOLON)) {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+
+    // Jump out of the loop if condition is false
+    exitJump = emitJump(OP_JUMP_IF_FALSE);
+    // Pop the result from expression evaluation (in the `true` case)
+    emitByte(OP_POP);
+  }
+
+  // Loop increment operation
+  if (!match(TOKEN_RIGHT_PAREN)) {
+    // Jump over the increment clause to loop body
+    int bodyJump = emitJump(OP_JUMP);
+
+    // Compile the code for the increment clause
+    int incrementStart = currentChunk()->count;
+    expression();
+    emitByte(OP_POP);
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
+
+    emitLoop(loopStart);
+    loopStart = incrementStart;
+    patchJump(bodyJump);
+  }
+
+  statement();
+  
+  emitLoop(loopStart);
+
+  if (exitJump != -1) {
+    patchJump(exitJump);
+    // Pop the result from expression evaluation (in the `false` case)
+    emitByte(OP_POP);
+  }
+
+  endScope();
+}
+
 /**
  * Emit the bytecode for a statement into the bytecode stream.
  */
@@ -968,6 +1033,8 @@ static void statement() {
     ifStatement();
   } else if (match(TOKEN_WHILE)) {
     whileStatement();
+  } else if (match(TOKEN_FOR)) {
+    forStatement();
   } else if (match(TOKEN_LEFT_BRACE)) {
     beginScope();
     block();
