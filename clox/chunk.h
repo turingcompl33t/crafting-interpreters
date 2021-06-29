@@ -49,6 +49,10 @@ typedef enum {
 
   /** Print statement */
   OP_PRINT,
+
+  /** Control flow */
+  OP_JUMP,
+  OP_JUMP_IF_FALSE,
   
   /** Return from a subroutine */
   OP_RETURN,

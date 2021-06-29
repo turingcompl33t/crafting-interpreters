@@ -368,6 +368,45 @@ static void emitConstant(Value value) {
 }
 
 /**
+ * Emit a jump instruction into the bytecode stream.
+ * @param opcode The opcode for the jump to emit
+ * @return The address of the emitted jump instruction
+ */
+static int emitJump(uint8_t opcode) {
+  emitByte(opcode);
+
+  // NOTE: Here we limit ourselves to 2 bytes with
+  // which we can specify the jump offset; this limits
+  // the range of the jump targets we can take, and is
+  // why some architectures have distinct jump and
+  // "long jump" instructions
+  emitByte(0xFF);
+  emitByte(0xFF);
+
+  // Return the address of the start of the jump
+  return currentChunk()->count - 2;
+}
+
+/**
+ * Patch the jump instruction at `offset` with a jump target
+ * that jumps to the current location in the bytecode stream.
+ * @param offset The address of the jump instruction to patch
+ */
+static void patchJump(int offset) {
+  // Compute the jump target;
+  // -2 to account for jump target itself
+  int jump = currentChunk()->count - offset - 2;
+
+  if (jump > UINT16_MAX) {
+    error("Jump offset too large.");
+  }
+
+  // Perform the patch
+  currentChunk()->code[offset] = (jump >> 8) & 0xFF;
+  currentChunk()->code[offset + 1] = jump & 0xFF;
+}
+
+/**
  * Terminate the compilation process.
  */
 static void endCompiler() {
@@ -759,6 +798,42 @@ static void printStatement() {
 }
 
 /**
+ * Emit the bytecode for a conditional branch into the bytecode stream.
+ */
+static void ifStatement() {
+  // Compile the expression for the condition; the result
+  // of evaluting this expression is left at the stack top
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after 'if'.");
+
+  // Emit the jump bytecode first with a dummy jump offset;
+  // track the location of the jump so we can patch later
+  int thenJump = emitJump(OP_JUMP_IF_FALSE);
+  // Emit the instruction to pop the condition result
+  // from the stack at the start of the 'then' branch
+  emitByte(OP_POP);
+  statement();
+
+  // Emit a jump to skip over the 'else' branch at the 
+  // end of the 'then' branch
+  int elseJump = emitJump(OP_JUMP);
+
+  // Backpatch the correct jump target
+  patchJump(thenJump);
+
+  // Emit the instruction to pop the condition result
+  // from, the stack at the start of the 'else' branch
+  emitByte(OP_POP);
+
+  // If an 'else' branch is present, compile it
+  if (match(TOKEN_ELSE)) statement();
+
+  // Finally, path the unconditional 'else' jump
+  patchJump(elseJump);
+}
+
+/**
  * Emit the bytecode for a block statement into the bytecode stream.
  */
 static void block() {
@@ -811,6 +886,8 @@ static void varDeclaration() {
 static void statement() {
   if (match(TOKEN_PRINT)) {
     printStatement();
+  } else if (match(TOKEN_IF)) {
+    ifStatement();
   } else if (match(TOKEN_LEFT_BRACE)) {
     beginScope();
     block();

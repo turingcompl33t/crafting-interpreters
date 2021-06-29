@@ -1,0 +1,7 @@
+// hello
+var x = 10;
+if (x > 5) {
+  print "10 > 5";
+} else {
+  print "10 <= 5";
+}

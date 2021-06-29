@@ -109,3 +109,7 @@ General principle: pulling work forward into the compiler to remove runtime over
 A complete high-level description of the implementation of local variables in clox is as follows:
 
 TODO
+
+**Jumping Back and Forth**
+
+Implementing control flow. We implemented control flow in jlox in term's of Java's control flow - this is simple and expedient, but keeps us from doing the real work of implementing control flow.
