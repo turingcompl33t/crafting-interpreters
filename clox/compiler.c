@@ -388,6 +388,20 @@ static int emitJump(uint8_t opcode) {
 }
 
 /**
+ * Emit the bytecode to jump to loop header into bytecode stream.
+ * @param loopStart The address of the loop header
+ */
+static void emitLoop(int loopStart) {
+  emitByte(OP_LOOP);
+
+  int offset = currentChunk()->count - loopStart + 2;
+  if (offset > UINT16_MAX) error("Loop body too large.");
+
+  emitByte((offset >> 8) & 0xFF);
+  emitByte(offset & 0xFF);
+}
+
+/**
  * Patch the jump instruction at `offset` with a jump target
  * that jumps to the current location in the bytecode stream.
  * @param offset The address of the jump instruction to patch
@@ -605,6 +619,46 @@ static void expression() {
 }
 
 /**
+ * Emit the bytecode for a logical conjunction into the bytecode stream.
+ */
+static void and_(bool canAssign) {
+  // Left-hand expression is evaluated, on top of stack;
+  // if it is falsey, we jump past evaluation of the 
+  // right-hand side of the expression, and leave the
+  // result of the left-hand side as the complete result
+  int endJump = emitJump(OP_JUMP_IF_FALSE);
+
+  emitByte(OP_POP);
+  parsePrecedence(PREC_AND);
+
+  patchJump(endJump);
+}
+
+/**
+ * Emit the code for logical disjunction into the bytecode stream.
+ */
+static void or_(bool canAssign) {
+  // Left-hand side of expression is evaluated, on top of stack;
+  // if it is falsey, we jump over the unconditional jump to the
+  // point where we evaluate the right-hand side, otherwise we
+  // fall through to the unconditional jump and skip evaluation of
+  // the right-hand side of the expression.
+
+  // NOTE: We could totally add another instruction OP_JUMP_IF_TRUE
+  // to the virtual machine's instruction set to make this slightly
+  // more straightforward
+
+  int elseJump = emitJump(OP_JUMP_IF_FALSE);
+  int endJump = emitJump(OP_JUMP);
+
+  patchJump(elseJump);
+  emitByte(OP_POP);
+
+  parsePrecedence(PREC_OR);
+  patchJump(endJump);
+}
+
+/**
  * The parser table.
  */
 ParseRule rules[] = {
@@ -630,7 +684,7 @@ ParseRule rules[] = {
   [TOKEN_IDENTIFIER]    = {variable, NULL,   PREC_NONE},
   [TOKEN_STRING]        = {string,   NULL,   PREC_NONE},
   [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
-  [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_AND]           = {NULL,     and_,   PREC_NONE},
   [TOKEN_CLASS]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ELSE]          = {NULL,     NULL,   PREC_NONE},
   [TOKEN_FALSE]         = {literal,  NULL,   PREC_NONE},
@@ -638,7 +692,7 @@ ParseRule rules[] = {
   [TOKEN_FUN]           = {NULL,     NULL,   PREC_NONE},
   [TOKEN_IF]            = {NULL,     NULL,   PREC_NONE},
   [TOKEN_NIL]           = {literal,  NULL,   PREC_NONE},
-  [TOKEN_OR]            = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_OR]            = {NULL,     or_,    PREC_NONE},
   [TOKEN_PRINT]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_RETURN]        = {NULL,     NULL,   PREC_NONE},
   [TOKEN_SUPER]         = {NULL,     NULL,   PREC_NONE},
@@ -833,6 +887,30 @@ static void ifStatement() {
   patchJump(elseJump);
 }
 
+static void whileStatement() {
+  // Capture the loop start location in bytecode
+  int loopStart = currentChunk()->count;
+  
+  // Emit the code to evaluate the loop condition
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+  // Emit the jump to break out of the loop if condition is falsey
+  int exitJump = emitJump(OP_JUMP_IF_FALSE);
+  // Emit the pop to remove the evaluation of condition from stack
+  emitByte(OP_POP);
+  // Emit the code for the loop body
+  statement();
+  // Emit the jump to the loop header
+  emitLoop(loopStart);
+
+  // Patch the jump target for exiting the loop
+  patchJump(exitJump);
+  // Emit the pop for the loop body statement
+  emitByte(OP_POP);
+}
+
 /**
  * Emit the bytecode for a block statement into the bytecode stream.
  */
@@ -888,6 +966,8 @@ static void statement() {
     printStatement();
   } else if (match(TOKEN_IF)) {
     ifStatement();
+  } else if (match(TOKEN_WHILE)) {
+    whileStatement();
   } else if (match(TOKEN_LEFT_BRACE)) {
     beginScope();
     block();

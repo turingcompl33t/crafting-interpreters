@@ -53,6 +53,7 @@ typedef enum {
   /** Control flow */
   OP_JUMP,
   OP_JUMP_IF_FALSE,
+  OP_LOOP,
   
   /** Return from a subroutine */
   OP_RETURN,
