@@ -5,22 +5,37 @@
 #ifndef CLOX_VM_H
 #define CLOX_VM_H
 
+#include "object.h"
 #include "chunk.h"
 #include "table.h"
 #include "value.h"
 
+/** The maximum number of active call frames */
+#define FRAMES_MAX 64
 /** The maximum size of the clox VM runtime stack */
-#define STACK_MAX 256
+#define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
+
+/**
+ * The CallFrame type represents a single in-flight function invocation.
+ */
+typedef struct {
+  /** The function object associated with this call frame */
+  FunctionObject* function;
+  /** The current instruction pointer for this frame */
+  uint8_t* ip;
+  /** A pointer into the VM's stack where the slots for this call begin */
+  Value* slots;
+} CallFrame;
 
 /**
  * A VM instance encapsulates all of the state
  * necessary to interpret a chunk of bytecode.
  */
 typedef struct {
-  /** The chunk of bytecode that the VM interprets */
-  Chunk* chunk;
-  /** The virtual machine instruction pointer */
-  uint8_t* ip;
+  /** The implicit stack of call frames */
+  CallFrame frames[FRAMES_MAX];
+  /** The current number of active frames */
+  int frameCount;
   /** The virtual machine runtime stack */
   Value stack[STACK_MAX];
   /** A pointer to the top of the stack (one past the final element)*/

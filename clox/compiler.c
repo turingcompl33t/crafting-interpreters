@@ -83,9 +83,24 @@ typedef struct {
 } Local;
 
 /**
+ * The FunctionType enumeration defines the type of
+ * the function for which code is currently being compiled.
+ */
+typedef enum {
+  /** A standard, user-defined function */
+  TYPE_FUNCTION,
+  /** The implicit top-level function */
+  TYPE_SCRIPT
+} FunctionType;
+
+/**
  * The Compiler type maintains state during the compilation process.
  */
 typedef struct {
+  /** The function for which code is currently being compiled */
+  FunctionObject* function;
+  /** The type of the function for which code is currently being compiled */
+  FunctionType type;
   /** A flat array of in-scope locals */
   Local locals[UINT8_COUNT];
   /** The number of locals in scope */
@@ -105,7 +120,7 @@ Chunk* compilingChunk;
  * @return A pointer to the chunk to which bytecode is written.
  */
 static Chunk* currentChunk() {
-  return compilingChunk;
+  return &current->function->chunk;
 }
 
 // ----------------------------------------------------------------------------
@@ -118,10 +133,18 @@ static void emitByte(uint8_t byte);
 /**
  * Initialize the global compiler instance with `compiler`.
  */
-static void initCompiler(Compiler* compiler) {
+static void initCompiler(Compiler* compiler, FunctionType type) {
+  compiler->function = NULL;
+  compiler->type = type;
   compiler->localCount = 0;
   compiler->scopeDepth = 0;
+  compiler->function = newFunction();
   current = compiler;
+
+  Local* local = &current->locals[current->localCount++];
+  local->depth = 0;
+  local->name.start = "";
+  local->name.length = 0;
 }
 
 /**
@@ -423,14 +446,18 @@ static void patchJump(int offset) {
 /**
  * Terminate the compilation process.
  */
-static void endCompiler() {
+static FunctionObject* endCompiler() {
   emitReturn();
+  FunctionObject* function = current->function;
 
 #ifdef DEBUG_PRINT_CODE
   if (!parser.hadError) {
-    disassembleChunk(currentChunk(), "code");
+    disassembleChunk(currentChunk(), 
+      function->name != NULL ? function->name->data : "<script>");
   }
 #endif
+
+  return function;
 }
 
 // ----------------------------------------------------------------------------
@@ -1063,13 +1090,11 @@ static void declaration() {
 // Compilation Interface
 // ----------------------------------------------------------------------------
 
-bool compile(const char* source, Chunk* chunk) {
+FunctionObject* compile(const char* source) {
   initScanner(source);
 
   Compiler compiler;
-  initCompiler(&compiler);
-
-  compilingChunk = chunk;
+  initCompiler(&compiler, TYPE_SCRIPT);
 
   parser.hadError = false;
   parser.panicMode = false;
@@ -1081,7 +1106,7 @@ bool compile(const char* source, Chunk* chunk) {
   }
 
   consume(TOKEN_EOF, "Expect end of expression.");
-  endCompiler();
+  FunctionObject* function = endCompiler();
 
-  return !parser.hadError;
+  return parser.hadError ? NULL : function;
 }

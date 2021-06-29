@@ -11,9 +11,8 @@
 /**
  * Compile the Lox source program.
  * @param source The Lox source program buffer
- * @param chunk The chunk to which the compiled bytecode is written
- * @return `true` if compilation succeeds, `false` otherwise
+ * @return The function object for the script
  */
-bool compile(const char* source, Chunk* chunk);
+FunctionObject* compile(const char* source);
 
 #endif // CLOX_COMPILER_H

@@ -113,3 +113,8 @@ TODO
 **Jumping Back and Forth**
 
 Implementing control flow. We implemented control flow in jlox in term's of Java's control flow - this is simple and expedient, but keeps us from doing the real work of implementing control flow.
+
+However, for those familiar with how control flow is implemented in an assembly language (e.g. x86) there really are not many surprises in this chapter - we implement control flow in an unstructured, flat sequence of bytecode instructions via conditional and unconditional jump instructions.
+
+**Calls and Functions**
+

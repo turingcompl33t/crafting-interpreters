@@ -30,6 +30,29 @@ static Object* allocateObject(size_t size, ObjectType type) {
 }
 
 /**
+ * Print a string representation of the function object to standard output.
+ * @param function The function to print
+ */
+static void printFunction(FunctionObject* function) {
+  if (function->name == NULL) {
+    printf("<script>");
+    return;
+  }
+  printf("<fn %s>", function->name->data);
+}
+
+void printObject(Value value) {
+  switch (OBJECT_TYPE(value)) {
+    case OBJ_FUNCTION:
+      printFunction(AS_FUNCTION(value));
+      break;
+    case OBJ_STRING:
+      printf("%s", AS_CSTRING(value));
+      break;
+  }
+}
+
+/**
  * Create a new string object on the heap and initialize its fields.
  * @param data The string data
  * @param length The length of the string
@@ -95,10 +118,10 @@ StringObject* copyString(const char* data, int length) {
   return allocateString(heapChars, length, hash);
 }
 
-void printObject(Value value) {
-  switch (OBJECT_TYPE(value)) {
-    case OBJ_STRING:
-      printf("%s", AS_CSTRING(value));
-      break;
-  }
+FunctionObject* newFunction() {
+  FunctionObject* function = ALLOCATE_OBJECT(FunctionObject, OBJ_FUNCTION);
+  function->arity = 0;
+  function->name = NULL;
+  initChunk(&function->chunk);
+  return function;
 }

@@ -5,20 +5,24 @@
 #ifndef CLOX_OBJECT_H
 #define CLOX_OBJECT_H
 
+#include "chunk.h"
 #include "value.h"
 
 #define OBJECT_TYPE(value) (AS_OBJECT(value)->type)
 
-#define IS_STRING(value) isObjectType(value, OBJ_STRING)
+#define IS_FUNCTION(value) isObjectType(value, OBJ_FUNCTION)
+#define IS_STRING(value)   isObjectType(value, OBJ_STRING)
 
-#define AS_STRING(value)  ((StringObject*)AS_OBJECT(value))
-#define AS_CSTRING(value) (((StringObject*)AS_OBJECT(value))->data)
+#define AS_FUNCTION(value) ((FunctionObject*)AS_OBJECT(value))
+#define AS_STRING(value)   ((StringObject*)AS_OBJECT(value))
+#define AS_CSTRING(value)  (((StringObject*)AS_OBJECT(value))->data)
 
 /**
  * ObjectType enumerates the types of Lox objects.
  */
 typedef enum {
-  OBJ_STRING
+  OBJ_FUNCTION,
+  OBJ_STRING,
 } ObjectType;
 
 /**
@@ -31,6 +35,12 @@ struct Object {
   /** The next entry in the intrusive list of objects */
   struct Object* next;
 };
+
+/**
+ * Print the object represented by `value`.
+ * @param value The object to print
+ */
+void printObject(Value value);
 
 /**
  * The StringObject type implements the Lox string type.
@@ -70,10 +80,20 @@ StringObject* takeString(char* data, int length);
 StringObject* copyString(const char* data, int length);
 
 /**
- * Print the object represented by `value`.
- * @param value The object to print
+ * The FunctionObject type represents a Lox function.
  */
-void printObject(Value value);
+typedef struct {
+  /** The common object header */
+  Object object;
+  /** The function's arity */
+  int arity;
+  /** The function's bytecode chunk */
+  Chunk chunk;
+  /** The name of the function */
+  StringObject* name;
+} FunctionObject;
+
+FunctionObject* newFunction();
 
 /**
  * Determine if the value is an object of the specified type.
