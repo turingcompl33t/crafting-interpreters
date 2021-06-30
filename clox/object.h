@@ -89,11 +89,15 @@ StringObject* copyString(const char* data, int length);
 /**
  * The UpvalueObject type represents a Lox upvalue.
  */
-typedef struct {
+typedef struct UpvalueObject {
   /** The common object header */
   Object object;
   /** The upvalue location */
   Value* location;
+  /** The value itself, when upvalue is closed */
+  Value closed;
+  /** The next upvalue in the intrusive list of upvalues */
+  struct UpvalueObject* next;
 } UpvalueObject;
 
 /**

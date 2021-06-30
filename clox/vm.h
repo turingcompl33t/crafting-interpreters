@@ -46,6 +46,8 @@ typedef struct {
   Table globals;
   /** The string-interning table */
   Table strings;
+  /** Instrusive linked list of open upvalues */
+  UpvalueObject* openUpvalues;
 } VM;
 
 /**

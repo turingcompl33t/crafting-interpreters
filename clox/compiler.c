@@ -83,6 +83,8 @@ typedef struct {
   Token name;
   /** The depth of the scope in which the local appears */
   int depth;
+  /** Denotes whether this local is captured by a closure */
+  bool isCaptured;
 } Local;
 
 /**
@@ -167,6 +169,7 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
   local->depth = 0;
   local->name.start = "";
   local->name.length = 0;
+  local->isCaptured = false;
 }
 
 /**
@@ -187,7 +190,15 @@ static void endScope() {
   // same depth as the NEW scope depth, continue to pop locals
   while (current->localCount > 0 &&
     current->locals[current->localCount - 1].depth > current->scopeDepth) {
-    emitByte(OP_POP);
+    if (current->locals[current->localCount - 1].isCaptured) {
+      // If the local is captured by a closure, close the upvalue
+      // and move the value to the heap to ensure that it survives
+      // beyond the stack-based lifetime that is ending now
+      emitByte(OP_CLOSE_UPVALUE);
+    } else {
+      // Otherwise, the local is not captured, so just remove it
+      emitByte(OP_POP);
+    }
     current->localCount--;
   }
 }
@@ -392,6 +403,8 @@ static int resolveUpvalue(Compiler* compiler, Token* name) {
   // Attempt to resolve the upvalue in the immediately enclosing scope
   int local = resolveLocal(compiler->enclosing, name);
   if (local != -1) {
+    // Mark the local as captured
+    compiler->enclosing->locals[local].isCaptured = true;
     return addUpvalue(compiler, (uint8_t)local, true);
   }
 
@@ -418,6 +431,7 @@ static void addLocal(Token name) {
   local->name = name;
   // Set the local's depth to a sentinel value before initialization
   local->depth = -1;
+  local->isCaptured = false;
 }
 
 /**

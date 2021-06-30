@@ -123,3 +123,7 @@ The virtual machine represents objects at runtime using the `FunctionObject` typ
 **Closures**
 
 The author points us to search for resources on "closure conversion" to research potential optimizations to apply when compiling closures.
+
+Do closures close over values or over variables? C++ is cool in the respect that it allows you to capture both by value and by reference, so it supports both forms of closure with a small syntactic modification.
+
+Essentially taking the implementation of closures from Lua interpreter.

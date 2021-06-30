@@ -58,8 +58,11 @@ typedef enum {
   OP_JUMP,
   OP_JUMP_IF_FALSE,
   OP_LOOP,
+
+  /** Function calls */
   OP_CALL,
   OP_CLOSURE,
+  OP_CLOSE_UPVALUE,
   
   /** Return from a subroutine */
   OP_RETURN,

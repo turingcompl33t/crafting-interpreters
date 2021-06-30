@@ -130,6 +130,8 @@ StringObject* copyString(const char* data, int length) {
 UpvalueObject* newUpvalue(Value* slot) {
   UpvalueObject* upvalue = ALLOCATE_OBJECT(UpvalueObject, OBJ_UPVALUE);
   upvalue->location = slot;
+  upvalue->closed = NIL_VAL;
+  upvalue->next = NULL;
   return upvalue;
 }
 

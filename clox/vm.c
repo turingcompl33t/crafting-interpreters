@@ -33,6 +33,7 @@ static Value clockNative(int argcCount, Value* args) {
 static void resetStack() {
   vm.stackTop = vm.stack;
   vm.frameCount = 0;
+  vm.openUpvalues = NULL;
 }
 
 /**
@@ -204,8 +205,43 @@ static bool callValue(Value callee, int argCount) {
  * @return The captured upvalue
  */
 static UpvalueObject* captureUpvalue(Value* local) {
+  // Search for an existing upvalue at the same location
+  UpvalueObject* prevUpvalue = NULL;
+  UpvalueObject* upvalue = vm.openUpvalues;
+  while (upvalue != NULL && upvalue->location > local) {
+    prevUpvalue = upvalue;
+    upvalue = upvalue->next;
+  }
+
+  if (upvalue != NULL && upvalue->location == local) {
+    return upvalue;
+  }
+
+  // The upvalue does not already exist, so create it
   UpvalueObject* createdUpvalue = newUpvalue(local);
+  
+  // Splice the new upvalue into the intrusive list
+  createdUpvalue->next = upvalue;
+  if (prevUpvalue == NULL) {
+    vm.openUpvalues = createdUpvalue;
+  } else {
+    prevUpvalue->next = createdUpvalue;
+  }
+
   return createdUpvalue;
+}
+
+/**
+ * Close all upvalues that appear above `last` on the stack.
+ * @param last The last upvalue to close
+ */
+static void closeUpvalues(Value* last) {
+  while (vm.openUpvalues != NULL && vm.openUpvalues->location >= last) {
+    UpvalueObject* upvalue = vm.openUpvalues;
+    upvalue->closed = *upvalue->location;
+    upvalue->location = &upvalue->closed;
+    vm.openUpvalues = upvalue->next;
+  }
 }
 
 /**
@@ -407,8 +443,15 @@ static InterpretResult run() {
         break;
       }
 
+      case OP_CLOSE_UPVALUE: {
+        closeUpvalues(vm.stackTop - 1);
+        pop();
+        break;
+      }
+
       case OP_RETURN: {
         Value result = pop();
+        closeUpvalues(frame->slots);
         vm.frameCount--;
         if (vm.frameCount == 0) {
           pop();
