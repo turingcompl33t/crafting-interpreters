@@ -20,7 +20,7 @@
  */
 typedef struct {
   /** The function object associated with this call frame */
-  FunctionObject* function;
+  ClosureObject* closure;
   /** The current instruction pointer for this frame */
   uint8_t* ip;
   /** A pointer into the VM's stack where the slots for this call begin */

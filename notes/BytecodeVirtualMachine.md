@@ -118,3 +118,8 @@ However, for those familiar with how control flow is implemented in an assembly 
 
 **Calls and Functions**
 
+The virtual machine represents objects at runtime using the `FunctionObject` type. These objects are created by the frontend during compilation, and then at runtime the VM just loads the function object from the constant pool and binds it to a name. This works because all of the data needed to define a function is known at compile time.
+
+**Closures**
+
+The author points us to search for resources on "closure conversion" to research potential optimizations to apply when compiling closures.

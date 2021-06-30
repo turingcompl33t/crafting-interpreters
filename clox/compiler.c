@@ -979,7 +979,9 @@ static void function(FunctionType type) {
 
   endScope();
   FunctionObject* function = endCompiler();
-  emitBytes(OP_CONSTANT, makeConstant(OBJECT_VAL(function)));
+  // Instruct the runtime to construct a closure object
+  // for the function that we have just defined
+  emitBytes(OP_CLOSURE, makeConstant(OBJECT_VAL(function)));
 }
 
 /**

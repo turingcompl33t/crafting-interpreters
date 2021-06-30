@@ -43,6 +43,9 @@ static void printFunction(FunctionObject* function) {
 
 void printObject(Value value) {
   switch (OBJECT_TYPE(value)) {
+    case OBJ_CLOSURE:
+      printFunction(AS_CLOSURE(value)->function);
+      break;
     case OBJ_FUNCTION:
       printFunction(AS_FUNCTION(value));
       break;
@@ -127,6 +130,12 @@ FunctionObject* newFunction() {
   function->name = NULL;
   initChunk(&function->chunk);
   return function;
+}
+
+ClosureObject* newClosure(FunctionObject* function) {
+  ClosureObject* closure = ALLOCATE_OBJECT(ClosureObject, OBJ_CLOSURE);
+  closure->function = function;
+  return closure;
 }
 
 NativeFnObject* newNativeFn(NativeFn function) {

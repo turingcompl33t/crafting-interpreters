@@ -62,7 +62,7 @@ static void runtimeError(const char* format, ...) {
 
   for (int i = vm.frameCount - 1; i >= 0; i--) {
     CallFrame* frame = &vm.frames[i];
-    FunctionObject* function = frame->function;
+    FunctionObject* function = frame->closure->function;
     size_t instruction = frame->ip - function->chunk.code - 1;
     fprintf(stderr, "[line %d] in ", function->chunk.lines[instruction]);
     if (function->name == NULL) {
@@ -149,13 +149,14 @@ static void concatenate() {
 
 /**
  * Call a Lox function object.
- * @param function The function to call
+ * @param closure The closure to call
  * @param argCount The number of arguments to the call
  * @return `true` if the call is successful, `false` otherwise
  */
-static bool call(FunctionObject* function, int argCount) {
-  if (argCount != function->arity) {
-    runtimeError("Expected %d arguments but got %d.", function->arity, argCount);
+static bool call(ClosureObject* closure, int argCount) {
+  if (argCount != closure->function->arity) {
+    runtimeError("Expected %d arguments but got %d.",
+      closure->function->arity, argCount);
     return false;
   }
 
@@ -165,8 +166,8 @@ static bool call(FunctionObject* function, int argCount) {
   }
 
   CallFrame* frame = &vm.frames[vm.frameCount++];
-  frame->function = function;
-  frame->ip = function->chunk.code;
+  frame->closure = closure;
+  frame->ip = closure->function->chunk.code;
   frame->slots = vm.stackTop - argCount - 1;
   return true;
 }
@@ -180,8 +181,8 @@ static bool call(FunctionObject* function, int argCount) {
 static bool callValue(Value callee, int argCount) {
   if (IS_OBJECT(callee)) {
     switch (OBJECT_TYPE(callee)) {
-      case OBJ_FUNCTION:
-        return call(AS_FUNCTION(callee), argCount);
+      case OBJ_CLOSURE:
+        return call(AS_CLOSURE(callee), argCount);
       case OBJ_NATIVE: {
         NativeFn native = AS_NATIVE(callee);
         Value result = native(argCount, vm.stackTop - argCount);
@@ -206,8 +207,10 @@ static InterpretResult run() {
   CallFrame* frame = &vm.frames[vm.frameCount - 1];
 
 #define READ_BYTE() (*frame->ip++)
-#define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
-#define READ_CONSTANT() (frame->function->chunk.constants.values[READ_BYTE()])
+#define READ_SHORT() \
+  (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
+#define READ_CONSTANT() \
+  (frame->closure->function->chunk.constants.values[READ_BYTE()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op)                                     \
   do {                                                               \
@@ -223,8 +226,8 @@ static InterpretResult run() {
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
       dumpStack();
-      disassembleInstruction(&frame->function->chunk,
-        (int)(frame->ip - frame->function->chunk.code));
+      disassembleInstruction(&frame->closure->function->chunk,
+        (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
 
     uint8_t instr;
@@ -363,6 +366,15 @@ static InterpretResult run() {
         break;
       }
 
+      case OP_CLOSURE: {
+        // Load the closure prototype from the constant pool
+        FunctionObject* function = AS_FUNCTION(READ_CONSTANT());
+        // Construct a new closure from this prototype
+        ClosureObject* closure = newClosure(function);
+        push(OBJECT_VAL(closure));
+        break;
+      }
+
       case OP_RETURN: {
         Value result = pop();
         vm.frameCount--;
@@ -392,7 +404,10 @@ InterpretResult interpret(const char* source) {
 
   // Prepare the interpreter to run the top-level function
   push(OBJECT_VAL(function));
-  call(function, 0);
+  ClosureObject* closure = newClosure(function);
+  pop();
+  push(OBJECT_VAL(closure));
+  call(closure, 0);
 
   return run();
 }

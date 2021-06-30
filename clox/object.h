@@ -10,10 +10,12 @@
 
 #define OBJECT_TYPE(value) (AS_OBJECT(value)->type)
 
+#define IS_CLOSURE(value)  isObjectType(value, OBJ_CLOSURE)
 #define IS_FUNCTION(value) isObjectType(value, OBJ_FUNCTION)
 #define IS_NATIVE(value)   isObjectType(value, OBJ_NATIVE)
 #define IS_STRING(value)   isObjectType(value, OBJ_STRING)
 
+#define AS_CLOSURE(value)  ((ClosureObject*)AS_OBJECT(value))
 #define AS_FUNCTION(value) ((FunctionObject*)AS_OBJECT(value))
 #define AS_NATIVE(value)   (((NativeFnObject*)AS_OBJECT(value))->function)
 #define AS_STRING(value)   ((StringObject*)AS_OBJECT(value))
@@ -23,6 +25,7 @@
  * ObjectType enumerates the types of Lox objects.
  */
 typedef enum {
+  OBJ_CLOSURE,
   OBJ_FUNCTION,
   OBJ_NATIVE,
   OBJ_STRING,
@@ -97,6 +100,23 @@ typedef struct {
 } FunctionObject;
 
 FunctionObject* newFunction();
+
+/**
+ * The ClosureObject type represents a Lox closure.
+ */
+typedef struct {
+  /** The common object header */
+  Object object;
+  /** The prototype for the closure */
+  FunctionObject* function;
+} ClosureObject;
+
+/**
+ * Construct a new closure object.
+ * @param function The closure prototype
+ * @return The closure object
+ */
+ClosureObject* newClosure(FunctionObject* function);
 
 /** The type signature for a native function type */
 typedef Value (*NativeFn)(int argCount, Value* args);
