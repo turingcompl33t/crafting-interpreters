@@ -49,10 +49,17 @@ static void runtimeError(const char* format, ...) {
   va_end(args);
   fputs("\n", stderr);
 
-  CallFrame* frame = &vm.frames[vm.frameCount - 1];
-  size_t instruction = frame->ip - frame->function->chunk.code - 1;
-  int line = frame->function->chunk.lines[instruction];
-  fprintf(stderr, "[line %d] in script\n", line);
+  for (int i = vm.frameCount - 1; i >= 0; i--) {
+    CallFrame* frame = &vm.frames[i];
+    FunctionObject* function = frame->function;
+    size_t instruction = frame->ip - function->chunk.code - 1;
+    fprintf(stderr, "[line %d] in ", function->chunk.lines[instruction]);
+    if (function->name == NULL) {
+      fprintf(stderr, "script\n");
+    } else {
+      fprintf(stderr, "%s()\n", function->name->data);
+    }
+  }
   
   resetStack();
 }
@@ -110,6 +117,49 @@ static void concatenate() {
 
   StringObject* result = takeString(data, length);
   push(OBJECT_VAL(result));
+}
+
+/**
+ * Call a Lox function object.
+ * @param function The function to call
+ * @param argCount The number of arguments to the call
+ * @return `true` if the call is successful, `false` otherwise
+ */
+static bool call(FunctionObject* function, int argCount) {
+  if (argCount != function->arity) {
+    runtimeError("Expected %d arguments but got %d.", function->arity, argCount);
+    return false;
+  }
+
+  if (vm.frameCount == FRAMES_MAX) {
+    runtimeError("Stack overflow.");
+    return false;
+  }
+
+  CallFrame* frame = &vm.frames[vm.frameCount++];
+  frame->function = function;
+  frame->ip = function->chunk.code;
+  frame->slots = vm.stackTop - argCount - 1;
+  return true;
+}
+
+/**
+ * Call the provided Lox value.
+ * @param callee The value to call
+ * @param argCount The number of arguments to the call
+ * @return `true` if the call is successful, `false` otherwise
+ */
+static bool callValue(Value callee, int argCount) {
+  if (IS_OBJECT(callee)) {
+    switch (OBJECT_TYPE(callee)) {
+      case OBJ_FUNCTION:
+        return call(AS_FUNCTION(callee), argCount);
+      default:
+        break; // Non-callable object
+    }
+  }
+  runtimeError("Invalid call target.");
+  return false;
 }
 
 /**
@@ -268,6 +318,16 @@ static InterpretResult run() {
         break;
       }
 
+      case OP_CALL: {
+        int argCount = READ_BYTE();
+        if (!callValue(peek(argCount), argCount)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        // Update the frame to the called function
+        frame = &vm.frames[vm.frameCount - 1];
+        break;
+      }
+
       case OP_RETURN: {
         return INTERPRET_OK;
       }
@@ -288,10 +348,7 @@ InterpretResult interpret(const char* source) {
 
   // Prepare the interpreter to run the top-level function
   push(OBJECT_VAL(function));
-  CallFrame* frame = &vm.frames[vm.frameCount++];
-  frame->function = function;
-  frame->ip = function->chunk.code;
-  frame->slots = vm.stack;
+  call(function, 0);
 
   return run();
 }

@@ -47,10 +47,10 @@ typedef struct {
 #define AS_NUMBER(value) ((value).as.number)
 #define AS_OBJECT(value) ((value).as.object)
 
-#define IS_BOOL(value)   ((value).type == VAL_BOOL)
-#define IS_NIL(value)    ((value).type == VAL_NIL)
-#define IS_NUMBER(value) ((value).type == VAL_NUMBER)
-#define IS_OBJECT(vale)  ((value).type == VAL_OBJECT)
+#define IS_BOOL(value)    ((value).type == VAL_BOOL)
+#define IS_NIL(value)     ((value).type == VAL_NIL)
+#define IS_NUMBER(value)  ((value).type == VAL_NUMBER)
+#define IS_OBJECT(value)  ((value).type == VAL_OBJECT)
 
 typedef struct {
   /** The current number of values in the array */

@@ -14,6 +14,9 @@
 #include "debug.h"
 #endif
 
+/** The maximum number of function arguments */
+#define MAX_ARGUMENT_COUNT 255
+
 /**
  * The Parser type stores the state maintained during parsing.
  */
@@ -97,6 +100,8 @@ typedef enum {
  * The Compiler type maintains state during the compilation process.
  */
 typedef struct {
+  /** The enclosing compiler instance */
+  struct Compiler* enclosing;
   /** The function for which code is currently being compiled */
   FunctionObject* function;
   /** The type of the function for which code is currently being compiled */
@@ -134,6 +139,11 @@ static void emitByte(uint8_t byte);
  * Initialize the global compiler instance with `compiler`.
  */
 static void initCompiler(Compiler* compiler, FunctionType type) {
+  compiler->enclosing = current;
+  if (type != TYPE_SCRIPT) {
+    current->function->name = copyString(parser.previous.start, parser.previous.length);
+  }
+
   compiler->function = NULL;
   compiler->type = type;
   compiler->localCount = 0;
@@ -352,6 +362,8 @@ static void addLocal(Token name) {
  * This function completes the 2-step process of delcaration and definition.
  */
 static void markInitialized() {
+  // Skip initialization for global fuction declarations
+  if (current->scopeDepth == 0) return;
   current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 
@@ -457,6 +469,9 @@ static FunctionObject* endCompiler() {
   }
 #endif
 
+  // Set the active compiler instance to the
+  // enclosing compiler for the finished compilation
+  current = current->enclosing;
   return function;
 }
 
@@ -609,6 +624,33 @@ static void binary(bool canAssign) {
 }
 
 /**
+ * Emit the bytecode to evaluate a call argument list into the bytecode stream.
+ */
+static uint8_t argumentList() {
+  uint8_t argCount = 0;
+  if (!check(TOKEN_RIGHT_PAREN)) {
+    do {
+      expression();
+      if (argCount == MAX_ARGUMENT_COUNT) {
+        error("Maximum argument count exceeded in function call.");
+      }
+      argCount++;
+    } while (match(TOKEN_COMMA));
+  }
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after function arguments.");
+  return argCount;
+}
+
+/**
+ * Emit the bytecode to evaluate a call expression into the bytecode stream.
+ * @param canAssign Ignored
+ */
+static void call(bool canAssign) {
+  uint8_t argCount = argumentList();
+  emitBytes(OP_CALL, argCount);
+}
+
+/**
  * Emit the bytecode to evaluate a grouping 
  * expression into the bytecode stream.
  * @param canAssign Ignored
@@ -689,7 +731,7 @@ static void or_(bool canAssign) {
  * The parser table.
  */
 ParseRule rules[] = {
-  [TOKEN_LEFT_PAREN]    = {grouping, NULL,   PREC_NONE},
+  [TOKEN_LEFT_PAREN]    = {grouping, call,   PREC_NONE},
   [TOKEN_RIGHT_PAREN]   = {NULL,     NULL,   PREC_NONE},
   [TOKEN_LEFT_BRACE]    = {NULL,     NULL,   PREC_NONE},
   [TOKEN_RIGHT_BRACE]   = {NULL,     NULL,   PREC_NONE},
@@ -889,6 +931,39 @@ static void block() {
 }
 
 /**
+ * Compile a function; emit the bytecode to load the
+ * function object address into the bytecode stream.
+ * @param type The function type
+ */
+static void function(FunctionType type) {
+  // Instantiate a new compiler instance for the function;
+  // all code emitted while compiling this function will
+  // be written to the chunk owned by this new compiler instance
+  Compiler compiler;
+  initCompiler(&compiler, type);
+  beginScope();
+
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+  if (!check(TOKEN_RIGHT_PAREN)) {
+    do {
+      current->function->arity++;
+      if (current->function->arity > MAX_ARGUMENT_COUNT) {
+        errorAtCurrent("Maximum argument count exceed in function declaration.");
+      }
+      uint8_t constant = parseVariable("Expect parameter name.");
+      defineVariable(constant);
+    } while (match(TOKEN_COMMA));
+  }
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after function parameters.");
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
+  block();
+
+  endScope();
+  FunctionObject* function = endCompiler();
+  emitBytes(OP_CONSTANT, makeConstant(OBJECT_VAL(function)));
+}
+
+/**
  * Emit the bytecode for an expression statement into the bytecode stream.
  */
 static void expressionStatement() {
@@ -925,6 +1000,15 @@ static void varDeclaration() {
   defineVariable(global);
 }
 
+/**
+ * Emit the bytecode for a function declaration into the bytecode stream.
+ */
+static void funDeclaration() {
+  uint8_t global = parseVariable("Expect function name.");
+  markInitialized();
+  function(TYPE_FUNCTION);
+  defineVariable(global);
+}
 
 /**
  * Emit the bytecode for a conditional branch into the bytecode stream.
@@ -1075,7 +1159,9 @@ static void statement() {
  * Emit the bytecode for a declaration into the bytecode stream. 
  */
 static void declaration() {
-  if (match(TOKEN_VAR)) {
+  if (match(TOKEN_FUN)) {
+    funDeclaration();
+  } else if (match(TOKEN_VAR)) {
     varDeclaration();
   } else {
     statement();
