@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "common.h"
 #include "compiler.h"
@@ -15,6 +16,16 @@
 
 /** The global virtual machine instance */
 VM vm;
+
+/**
+ * The clock() native function.
+ * @param argCount The argument count (ignored)
+ * @param args A pointer to function arguments (ignored)
+ * @return UNIX timestamp as Lox value
+ */
+static Value clockNative(int argcCount, Value* args) {
+  return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+}
 
 /**
  * Reset the stack pointer.
@@ -64,10 +75,27 @@ static void runtimeError(const char* format, ...) {
   resetStack();
 }
 
+/**
+ * Helper function to define a new native function.
+ * @param name The name of the native function
+ * @param function The function pointer itself
+ */
+static void defineNative(const char* name, NativeFn function) {
+  push(OBJECT_VAL(copyString(name, (int)strlen(name))));
+  push(OBJECT_VAL(newNativeFn(function)));
+  putTable(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+  pop();
+  pop();
+}
+
 void initVM() {
   resetStack();
+  
   initTable(&vm.globals);
   initTable(&vm.strings);
+
+  defineNative("clock", clockNative);
+
   vm.objects = NULL;
 }
 
@@ -154,6 +182,13 @@ static bool callValue(Value callee, int argCount) {
     switch (OBJECT_TYPE(callee)) {
       case OBJ_FUNCTION:
         return call(AS_FUNCTION(callee), argCount);
+      case OBJ_NATIVE: {
+        NativeFn native = AS_NATIVE(callee);
+        Value result = native(argCount, vm.stackTop - argCount);
+        vm.stackTop -= argCount + 1;
+        push(result);
+        return true;
+      }
       default:
         break; // Non-callable object
     }
@@ -329,7 +364,16 @@ static InterpretResult run() {
       }
 
       case OP_RETURN: {
-        return INTERPRET_OK;
+        Value result = pop();
+        vm.frameCount--;
+        if (vm.frameCount == 0) {
+          pop();
+          return INTERPRET_OK;
+        }
+        vm.stackTop = frame->slots;
+        push(result);
+        frame = &vm.frames[vm.frameCount - 1];
+        break;
       }
     }
   }

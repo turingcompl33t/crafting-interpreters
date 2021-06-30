@@ -11,9 +11,11 @@
 #define OBJECT_TYPE(value) (AS_OBJECT(value)->type)
 
 #define IS_FUNCTION(value) isObjectType(value, OBJ_FUNCTION)
+#define IS_NATIVE(value)   isObjectType(value, OBJ_NATIVE)
 #define IS_STRING(value)   isObjectType(value, OBJ_STRING)
 
 #define AS_FUNCTION(value) ((FunctionObject*)AS_OBJECT(value))
+#define AS_NATIVE(value)   (((NativeFnObject*)AS_OBJECT(value))->function)
 #define AS_STRING(value)   ((StringObject*)AS_OBJECT(value))
 #define AS_CSTRING(value)  (((StringObject*)AS_OBJECT(value))->data)
 
@@ -22,6 +24,7 @@
  */
 typedef enum {
   OBJ_FUNCTION,
+  OBJ_NATIVE,
   OBJ_STRING,
 } ObjectType;
 
@@ -94,6 +97,26 @@ typedef struct {
 } FunctionObject;
 
 FunctionObject* newFunction();
+
+/** The type signature for a native function type */
+typedef Value (*NativeFn)(int argCount, Value* args);
+
+/**
+ * The NativeObject type represents a Lox native function object.
+ */
+typedef struct {
+  /** The common object header */
+  Object object;
+  /** The native function pointer */
+  NativeFn function;
+} NativeFnObject;
+
+/**
+ * Construct a new native function object.
+ * @param function The native function pointer
+ * @return The native function object
+ */
+NativeFnObject* newNativeFn(NativeFn function);
 
 /**
  * Determine if the value is an object of the specified type.

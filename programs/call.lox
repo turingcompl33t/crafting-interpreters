@@ -1,0 +1,5 @@
+fun callme() {
+  print "Hello, Function Calls!";
+}
+
+callme();

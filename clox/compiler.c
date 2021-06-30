@@ -99,7 +99,7 @@ typedef enum {
 /**
  * The Compiler type maintains state during the compilation process.
  */
-typedef struct {
+typedef struct Compiler {
   /** The enclosing compiler instance */
   struct Compiler* enclosing;
   /** The function for which code is currently being compiled */
@@ -140,9 +140,6 @@ static void emitByte(uint8_t byte);
  */
 static void initCompiler(Compiler* compiler, FunctionType type) {
   compiler->enclosing = current;
-  if (type != TYPE_SCRIPT) {
-    current->function->name = copyString(parser.previous.start, parser.previous.length);
-  }
 
   compiler->function = NULL;
   compiler->type = type;
@@ -150,6 +147,9 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
   compiler->scopeDepth = 0;
   compiler->function = newFunction();
   current = compiler;
+  if (type != TYPE_SCRIPT) {
+    current->function->name = copyString(parser.previous.start, parser.previous.length);
+  }
 
   Local* local = &current->locals[current->localCount++];
   local->depth = 0;
@@ -389,6 +389,7 @@ static void emitBytes(uint8_t b0, uint8_t b1) {
  * Emit a return instruction into the bytecode stream.
  */
 static void emitReturn() {
+  emitByte(OP_NIL);
   emitByte(OP_RETURN);
 }
 
@@ -731,7 +732,7 @@ static void or_(bool canAssign) {
  * The parser table.
  */
 ParseRule rules[] = {
-  [TOKEN_LEFT_PAREN]    = {grouping, call,   PREC_NONE},
+  [TOKEN_LEFT_PAREN]    = {grouping, call,   PREC_CALL},
   [TOKEN_RIGHT_PAREN]   = {NULL,     NULL,   PREC_NONE},
   [TOKEN_LEFT_BRACE]    = {NULL,     NULL,   PREC_NONE},
   [TOKEN_RIGHT_BRACE]   = {NULL,     NULL,   PREC_NONE},
@@ -931,6 +932,23 @@ static void block() {
 }
 
 /**
+ * Emit the bytecode for a return statement into the bytecode stream.
+ */
+static void returnStatement() {
+  if (current->type == TYPE_SCRIPT) {
+    error("Can't return from top-level script code.");
+  }
+
+  if (match(TOKEN_SEMICOLON)) {
+    emitReturn();
+  } else {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
+    emitByte(OP_RETURN);
+  }
+}
+
+/**
  * Compile a function; emit the bytecode to load the
  * function object address into the bytecode stream.
  * @param type The function type
@@ -956,6 +974,7 @@ static void function(FunctionType type) {
   }
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after function parameters.");
   consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
+  
   block();
 
   endScope();
@@ -1140,6 +1159,8 @@ static void forStatement() {
 static void statement() {
   if (match(TOKEN_PRINT)) {
     printStatement();
+  } else if (match(TOKEN_RETURN)) {
+    returnStatement();
   } else if (match(TOKEN_IF)) {
     ifStatement();
   } else if (match(TOKEN_WHILE)) {
