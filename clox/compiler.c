@@ -86,6 +86,16 @@ typedef struct {
 } Local;
 
 /**
+ * The Upvalue type represents a function upvalue.
+ */
+typedef struct {
+  /** The index of the variable to which the upvalue refers */
+  uint8_t index;
+  /** `true` if the upvalue is a local, `false` otherwise */
+  bool isLocal;
+} Upvalue;
+
+/**
  * The FunctionType enumeration defines the type of
  * the function for which code is currently being compiled.
  */
@@ -110,6 +120,8 @@ typedef struct Compiler {
   Local locals[UINT8_COUNT];
   /** The number of locals in scope */
   int localCount;
+  /** The upvalues array for the current function */
+  Upvalue upvalues[UINT8_COUNT];
   /** The current scope depth */
   int scopeDepth;
 } Compiler;
@@ -341,6 +353,58 @@ static int resolveLocal(Compiler* compiler, Token* name) {
 }
 
 /**
+ * Add an upvalue to the function under compilation.
+ * @param compiler The compiler for the current function
+ * @param index The index of the upvalue in enclosing function
+ * @param isLocal flag indicating if the upvalue is a local
+ * @return The index of the created upvalue
+ */
+static int addUpvalue(Compiler* compiler, uint8_t index, bool isLocal) {
+  int upvalueCount = compiler->function->upvalueCount;
+
+  // Determine if we have already added this upvalue
+  for (int i = 0; i < upvalueCount; ++i) {
+    Upvalue* upvalue = &compiler->upvalues[i];
+    if (upvalue->index == index && upvalue->isLocal == isLocal) {
+      return i;
+    }
+  }
+
+  if (upvalueCount == UINT8_COUNT) {
+    error("Maximum number of closed-over variables exceeded.");
+    return 0;
+  }
+
+  compiler->upvalues[upvalueCount].isLocal = isLocal;
+  compiler->upvalues[upvalueCount].index = index;
+  return compiler->function->upvalueCount++;
+}
+
+/**
+ * Resolve the upvalue identified by `name`.
+ * @param compiler The compiler state
+ * @param name The token that identifies the upvalue to resolve
+ * @return The index of the upvalue, or -1 if not found
+ */
+static int resolveUpvalue(Compiler* compiler, Token* name) {
+  if (compiler->enclosing == NULL) return -1;
+
+  // Attempt to resolve the upvalue in the immediately enclosing scope
+  int local = resolveLocal(compiler->enclosing, name);
+  if (local != -1) {
+    return addUpvalue(compiler, (uint8_t)local, true);
+  }
+
+  // Attempt to recursively resolve the upvalue
+  int upvalue = resolveUpvalue(compiler->enclosing, name);
+  if (upvalue != -1) {
+    return addUpvalue(compiler, (uint8_t)upvalue, false);
+  }
+
+  return -1;
+}
+
+/**
  * Add a local variable to the locals array.
  * @param name The name of the local variable
  */
@@ -548,7 +612,11 @@ static void namedVariable(Token name, bool canAssign) {
   if (arg != -1) {
     getOp = OP_GET_LOCAL;
     setOp = OP_SET_LOCAL;
-  } else {
+  } else if ((arg = resolveUpvalue(current, &name)) != -1) {
+    getOp = OP_GET_UPVALUE;
+    setOp = OP_SET_UPVALUE;
+  } 
+  else {
     arg = identifierConstant(&name);
     getOp = OP_GET_GLOBAL;
     setOp = OP_SET_GLOBAL;
@@ -979,9 +1047,17 @@ static void function(FunctionType type) {
 
   endScope();
   FunctionObject* function = endCompiler();
+
   // Instruct the runtime to construct a closure object
   // for the function that we have just defined
   emitBytes(OP_CLOSURE, makeConstant(OBJECT_VAL(function)));
+  // OP_CLOSURE has a variable-sized encoding; for each
+  // upvalue the closure captures, we emit 2 additional bytes
+  // as additional operands to the instruction
+  for (int i = 0; i < function->upvalueCount; ++i) {
+    emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+    emitByte(compiler.upvalues[i].index);
+  }
 }
 
 /**

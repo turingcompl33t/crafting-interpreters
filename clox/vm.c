@@ -199,6 +199,16 @@ static bool callValue(Value callee, int argCount) {
 }
 
 /**
+ * Create a new upvalue for a captured local variable.
+ * @param local The local slot
+ * @return The captured upvalue
+ */
+static UpvalueObject* captureUpvalue(Value* local) {
+  UpvalueObject* createdUpvalue = newUpvalue(local);
+  return createdUpvalue;
+}
+
+/**
  * The main virtual machine run loop.
  * @return The result of program interpretation
  */
@@ -289,6 +299,17 @@ static InterpretResult run() {
         break;
       }
 
+      case OP_GET_UPVALUE: {
+        uint8_t slot = READ_BYTE();
+        push(*frame->closure->upvalues[slot]->location);
+        break;
+      }
+      case OP_SET_UPVALUE: {
+        uint8_t slot = READ_BYTE();
+        *frame->closure->upvalues[slot]->location = peek(0);
+        break;
+      }
+
       case OP_EQUAL: {
         Value b = pop();
         Value a = pop();
@@ -372,6 +393,17 @@ static InterpretResult run() {
         // Construct a new closure from this prototype
         ClosureObject* closure = newClosure(function);
         push(OBJECT_VAL(closure));
+        
+        // The magic moment where a closure comes to life
+        for (int i = 0; i < closure->upvalueCount; ++i) {
+          uint8_t isLocal = READ_BYTE();
+          uint8_t index = READ_BYTE();
+          if (isLocal) {
+            closure->upvalues[i] = captureUpvalue(frame->slots + index);
+          } else {
+            closure->upvalues[i] = frame->closure->upvalues[index];
+          }
+        }
         break;
       }
 

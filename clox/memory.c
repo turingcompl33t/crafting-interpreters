@@ -26,6 +26,11 @@ void* reallocate(void* ptr, size_t oldSize, size_t newSize) {
 static void freeObject(Object* object) {
   switch (object->type) {
     case OBJ_CLOSURE: {
+      ClosureObject* closure = (ClosureObject*)object;
+      // Free the array of upvalues for the closure
+      // NOTE: The closure does not own the upvalues themselves,
+      // but it DOES own the array of pointers to these upvalues
+      FREE_ARRAY(UpvalueObject*, closure->upvalues, closure->upvalueCount);
       // NOTE: The closure does not also free
       // its prototype because it may be shared
       // by multiple active closures
@@ -46,6 +51,10 @@ static void freeObject(Object* object) {
       StringObject* string = (StringObject*)object;
       FREE_ARRAY(char, string->data, string->length + 1);
       FREE(StringObject, object);
+      break;
+    }
+    case OBJ_UPVALUE: {
+      FREE(UpvalueObject, object);
       break;
     }
   }

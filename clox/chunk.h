@@ -32,6 +32,10 @@ typedef enum {
   OP_SET_GLOBAL,
   OP_DEFINE_GLOBAL,
 
+  /** Upvalues */
+  OP_GET_UPVALUE,
+  OP_SET_UPVALUE,
+
   /** Equality and comparison operators */
   OP_EQUAL,
   OP_GREATER,

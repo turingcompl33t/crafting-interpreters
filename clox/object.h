@@ -29,6 +29,7 @@ typedef enum {
   OBJ_FUNCTION,
   OBJ_NATIVE,
   OBJ_STRING,
+  OBJ_UPVALUE
 } ObjectType;
 
 /**
@@ -86,6 +87,23 @@ StringObject* takeString(char* data, int length);
 StringObject* copyString(const char* data, int length);
 
 /**
+ * The UpvalueObject type represents a Lox upvalue.
+ */
+typedef struct {
+  /** The common object header */
+  Object object;
+  /** The upvalue location */
+  Value* location;
+} UpvalueObject;
+
+/**
+ * Construct a new UpvalueObject.
+ * @param slot The pointer to the referenced value
+ * @return The upvalue object
+ */
+UpvalueObject* newUpvalue(Value* slot);
+
+/**
  * The FunctionObject type represents a Lox function.
  */
 typedef struct {
@@ -93,6 +111,8 @@ typedef struct {
   Object object;
   /** The function's arity */
   int arity;
+  /** The number of upvalues in the function */
+  int upvalueCount;
   /** The function's bytecode chunk */
   Chunk chunk;
   /** The name of the function */
@@ -109,6 +129,10 @@ typedef struct {
   Object object;
   /** The prototype for the closure */
   FunctionObject* function;
+  /** The array of upvalues */
+  UpvalueObject** upvalues;
+  /** The number of upvalues in the array */
+  int upvalueCount;
 } ClosureObject;
 
 /**

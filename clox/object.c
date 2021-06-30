@@ -55,6 +55,9 @@ void printObject(Value value) {
     case OBJ_STRING:
       printf("%s", AS_CSTRING(value));
       break;
+    case OBJ_UPVALUE:
+      printf("upvalue");
+      break;
   }
 }
 
@@ -124,17 +127,31 @@ StringObject* copyString(const char* data, int length) {
   return allocateString(heapChars, length, hash);
 }
 
+UpvalueObject* newUpvalue(Value* slot) {
+  UpvalueObject* upvalue = ALLOCATE_OBJECT(UpvalueObject, OBJ_UPVALUE);
+  upvalue->location = slot;
+  return upvalue;
+}
+
 FunctionObject* newFunction() {
   FunctionObject* function = ALLOCATE_OBJECT(FunctionObject, OBJ_FUNCTION);
   function->arity = 0;
+  function->upvalueCount = 0;
   function->name = NULL;
   initChunk(&function->chunk);
   return function;
 }
 
 ClosureObject* newClosure(FunctionObject* function) {
+  UpvalueObject** upvalues = ALLOCATE(UpvalueObject*, function->upvalueCount);
+  for (int i = 0; i < function->upvalueCount; ++i) {
+    upvalues[i] = NULL;
+  }
+
   ClosureObject* closure = ALLOCATE_OBJECT(ClosureObject, OBJ_CLOSURE);
   closure->function = function;
+  closure->upvalues = upvalues;
+  closure->upvalueCount = function->upvalueCount;
   return closure;
 }
 
