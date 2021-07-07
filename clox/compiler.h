@@ -15,4 +15,9 @@
  */
 FunctionObject* compile(const char* source);
 
+/**
+ * Mark the roots directly exposed to compiler for GC.
+ */
+void markCompilerRoots();
+
 #endif // CLOX_COMPILER_H

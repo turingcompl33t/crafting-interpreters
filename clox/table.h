@@ -86,4 +86,22 @@ void copyTable(Table* src, Table* dst);
  */
 StringObject* findStringTable(Table* table, const char* data, int length, uint32_t hash);
 
+/**
+ * Mark entries in the table during garbage collection. 
+ * @param table The table instance to mark
+ * 
+ * NOTE: Assumes the use of the table for tracking globals
+ * within the implementation of the virtual machine. I am
+ * not a fan of this coupling of the data structure with
+ * the GC implementation (at all) but will revisit this
+ * design decision when I implement the language for myself.
+ */
+void markForGCTable(Table* table);
+
+/**
+ * Remove all weak references from the table.
+ * @param table The table instance
+ */
+void removeWeakRefsTable(Table* table);
+
 #endif // CLOX_TABLE_H

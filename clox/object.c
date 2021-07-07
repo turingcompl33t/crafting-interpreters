@@ -15,6 +15,24 @@
   (type*)allocateObject(sizeof(type), objectType)
 
 /**
+ * Log object allocation event.
+ * @param object The object that is allocated
+ * @param size The size of the object
+ */
+static void logAllocateObject(Object* object, size_t size) {
+  printf("%p allocate %zu for %s", (void*)object, size, objectTypeString(object->type));
+  switch (object->type) {
+    case OBJ_STRING:
+    case OBJ_CLOSURE:
+    case OBJ_FUNCTION:
+    case OBJ_NATIVE:
+    case OBJ_UPVALUE:
+      break;
+  }
+  printf("\n");
+}
+
+/**
  * Allocate an object of the given size on the heap.
  * @param size The size of the object to allocate
  * @param type The object type
@@ -23,9 +41,15 @@
 static Object* allocateObject(size_t size, ObjectType type) {
   Object* object = (Object*)reallocate(NULL, 0, size);
   object->type = type;
+  object->isMarked = false;
   // Add the object to the linked list of objects in VM
   object->next = vm.objects;
   vm.objects = object;
+
+#ifdef DEBUG_LOG_GC
+  logAllocateObject(object, size);
+#endif
+
   return object;
 }
 
@@ -61,6 +85,23 @@ void printObject(Value value) {
   }
 }
 
+char* objectTypeString(ObjectType type) {
+  switch (type) {
+    case OBJ_CLOSURE:
+      return "OBJ_CLOSURE";
+    case OBJ_FUNCTION:
+      return "OBJ_FUNCTION";
+    case OBJ_NATIVE:
+      return "OBJ_NATIVE";
+    case OBJ_STRING:
+      return "OBJ_STRING";
+    case OBJ_UPVALUE:
+      return "OBJ_UPVALUE";
+    default:
+      return "UNKNOWN TYPE";
+  }
+}
+
 /**
  * Create a new string object on the heap and initialize its fields.
  * @param data The string data
@@ -73,8 +114,16 @@ static StringObject* allocateString(char* data, int length, uint32_t hash) {
   string->length = length;
   string->data = data;
   string->hash = hash;
-  // Automatically intern the string in the VM string table
+
+  // Automatically intern the string in the VM string table;
+  // note that we need to push and pop the string object here
+  // in order to ensure that a garbage collection that is 
+  // triggered by the putTable() operation does not collect a
+  // string that it not yet added as a root
+  push(OBJECT_VAL(string));
   putTable(&vm.strings, string, NIL_VAL);
+  pop();
+
   return string;
 }
 

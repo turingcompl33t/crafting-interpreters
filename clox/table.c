@@ -160,3 +160,20 @@ StringObject* findStringTable(Table* table, const char* data, int length, uint32
     index = (index + 1) % table->capacity;
   }
 }
+
+void markForGCTable(Table* table) {
+  for (int i = 0; i < table->capacity; ++i) {
+    Entry* entry = &table->entries[i];
+    markObject((Object*)entry->key);
+    markValue(entry->value);
+  }
+}
+
+void removeWeakRefsTable(Table* table) {
+  for (int i = 0; i < table->capacity; ++i) {
+    Entry* entry = &table->entries[i];
+    if (entry->key != NULL && !entry->key->object.isMarked) {
+      delTable(table, entry->key);
+    }
+  }
+}

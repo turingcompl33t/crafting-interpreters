@@ -92,18 +92,31 @@ static void defineNative(const char* name, NativeFn function) {
 void initVM() {
   resetStack();
   
+  vm.objects = NULL;
+
+  vm.grayCount = 0;
+  vm.grayCapacity = 0;
+  vm.grayStack = NULL;
+
   initTable(&vm.globals);
   initTable(&vm.strings);
 
+  // Define the clock() native function
   defineNative("clock", clockNative);
-
-  vm.objects = NULL;
 }
 
 void freeVM() {
   freeTable(&vm.globals);
   freeTable(&vm.strings);
   freeObjects();
+}
+
+size_t objectCountVM() {
+  size_t count = 0;
+  for (Object* object = vm.objects; object != NULL; object = object->next) {
+    ++count;
+  }
+  return count;
 }
 
 void push(Value value) {

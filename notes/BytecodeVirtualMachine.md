@@ -127,3 +127,8 @@ The author points us to search for resources on "closure conversion" to research
 Do closures close over values or over variables? C++ is cool in the respect that it allows you to capture both by value and by reference, so it supports both forms of closure with a small syntactic modification.
 
 Essentially taking the implementation of closures from Lua interpreter.
+
+**Garbage Collection**
+
+Interesting design point: we add a boolean `isMarked` field to the `Object` header to denote its status during GC. This increases the minimum size for ALL objects. How can we minimize the overhead of this boolean?
+

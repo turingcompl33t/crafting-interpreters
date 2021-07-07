@@ -37,4 +37,21 @@ void* reallocate(void* ptr, size_t oldSize, size_t newSize);
  */
 void freeObjects();
 
+/**
+ * Mark a value as `in-use` for garbage collection.
+ * @param value The value to mark
+ */
+void markValue(Value value);
+
+/**
+ * Mark an object as `in-use` for garbage collection.
+ * @param object The object to mark
+ */
+void markObject(Object* object);
+
+/**
+ * Run the garbage collector.
+ */
+void collectGarbage();
+
 #endif // CLOX_MEMORY_H

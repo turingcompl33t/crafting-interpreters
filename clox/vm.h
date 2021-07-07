@@ -48,6 +48,13 @@ typedef struct {
   Table strings;
   /** Instrusive linked list of open upvalues */
   UpvalueObject* openUpvalues;
+
+  /** The number of entries in the GC gray stack */
+  int grayCount;
+  /** The total capacity of the GC gray stack */
+  int grayCapacity;
+  /** The dynamic array that implements the GC gray stack */
+  Object** grayStack;
 } VM;
 
 /**
@@ -72,6 +79,9 @@ void initVM();
  * Deallocate all of the resources used by the virtual machine.
  */
 void freeVM();
+
+/** @return The current count of managed objects. */
+size_t objectCountVM();
 
 /**
  * Interpret a chunk of bytecode on the virtual machine.

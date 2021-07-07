@@ -39,6 +39,8 @@ typedef enum {
 struct Object {
   /** The type identifier for the object */
   ObjectType type;
+  /** Denotes whether the object is marked during GC */
+  bool isMarked;
   /** The next entry in the intrusive list of objects */
   struct Object* next;
 };
@@ -48,6 +50,13 @@ struct Object {
  * @param value The object to print
  */
 void printObject(Value value);
+
+/**
+ * Get the string representation of an object type.
+ * @param type The object type
+ * @return A non-owning string representation of object type
+ */
+char* objectTypeString(ObjectType type);
 
 /**
  * The StringObject type implements the Lox string type.
