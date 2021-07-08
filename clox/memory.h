@@ -23,6 +23,9 @@
 #define FREE_ARRAY(type, pointer, oldCount) \
   reallocate(pointer, sizeof(type) * (oldCount), 0)
 
+/** The initial managed heap capacity */
+#define GC_INITIAL_HEAP_CAPACITY (1024 * 1024)
+
 /**
  * Centralized function for memory allocation and deallocation.
  * @param ptr Existing pointer (for realloc() and free())

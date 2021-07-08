@@ -16,10 +16,10 @@
 // #define DEBUG_PRINT_CODE
 
 /** Denotes whether the GC is run deterministically (as often as possible) */
-#define DEBUG_STRESS_GC
+// #define DEBUG_STRESS_GC
 
 /** Denotes whether GC logging is enabled */
-#define DEBUG_LOG_GC
+// #define DEBUG_LOG_GC
 
 #define UINT8_COUNT (UINT8_MAX + 1)
 

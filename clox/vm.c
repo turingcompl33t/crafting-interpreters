@@ -94,6 +94,9 @@ void initVM() {
   
   vm.objects = NULL;
 
+  vm.bytesAllocated = 0;
+  vm.nextGC = GC_INITIAL_HEAP_CAPACITY;
+
   vm.grayCount = 0;
   vm.grayCapacity = 0;
   vm.grayStack = NULL;
@@ -148,8 +151,8 @@ static bool isFalsey(Value value) {
 }
 
 static void concatenate() {
-  StringObject* b = AS_STRING(pop());
-  StringObject* a = AS_STRING(pop());
+  StringObject* b = AS_STRING(peek(0));
+  StringObject* a = AS_STRING(peek(1));
 
   int length = a->length + b->length;
   char* data = ALLOCATE(char, length + 1);
@@ -158,6 +161,8 @@ static void concatenate() {
   data[length] = '\0';
 
   StringObject* result = takeString(data, length);
+  pop();
+  pop();
   push(OBJECT_VAL(result));
 }
 

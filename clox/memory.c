@@ -13,12 +13,25 @@
 #include "debug.h"
 #endif // DEBUG_LOG_GC
 
-void* reallocate(void* ptr, size_t oldSize, size_t newSize) {
-  // Trigger a GC whenever additional memory is requested
-  if (newSize > oldSize) {
+/** The factor by which the heap is expanded or contracted on GC */
+#define GC_HEAP_GROW_FACTOR 2
+
+/** @return `true` if a garbage collection should be triggered. */
+static bool shouldRunGC() {
 #ifdef DEBUG_STRESS_GC
-    collectGarbage();
+  // Trigger a GC whenever additional memory is requested
+  return true;
+#else    
+  // Trigger a GC when the current threshold is hit
+  return vm.bytesAllocated > vm.nextGC;
 #endif
+}
+
+void* reallocate(void* ptr, size_t oldSize, size_t newSize) {
+  vm.bytesAllocated += (newSize - oldSize);
+
+  if (newSize > oldSize && shouldRunGC()) {
+    collectGarbage();
   }
 
   if (newSize == 0) {
@@ -251,6 +264,7 @@ static void sweep() {
 void collectGarbage() {
 #ifdef DEBUG_LOG_GC
   printf("-- GC BEGIN (%zu managed objects)\n", objectCountVM());
+  size_t before = vm.bytesAllocated;
 #endif
 
 markRoots();
@@ -258,7 +272,11 @@ traceReferences();
 removeWeakRefsTable(&vm.strings);
 sweep();
 
+vm.nextGC = vm.bytesAllocated * GC_HEAP_GROW_FACTOR;
+
 #ifdef DEBUG_LOG_GC
   printf("-- GC END (%zu managed objects)\n", objectCountVM());
+  printf("   collected %zu bytes (from %zu to %zu) next at %zu\n",
+    before - vm.bytesAllocated, before, vm.bytesAllocated, vm.nextGC);
 #endif
 }

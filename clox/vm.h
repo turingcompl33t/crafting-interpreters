@@ -40,8 +40,6 @@ typedef struct {
   Value stack[STACK_MAX];
   /** A pointer to the top of the stack (one past the final element)*/
   Value* stackTop;
-  /** The head of the linked list of allocated objects */
-  Object* objects;
   /** Global variables */
   Table globals;
   /** The string-interning table */
@@ -49,12 +47,22 @@ typedef struct {
   /** Instrusive linked list of open upvalues */
   UpvalueObject* openUpvalues;
 
+  /** Garbage Collector State */
+
+  /** The head of the linked list of allocated objects */
+  Object* objects;
+
   /** The number of entries in the GC gray stack */
   int grayCount;
   /** The total capacity of the GC gray stack */
   int grayCapacity;
   /** The dynamic array that implements the GC gray stack */
   Object** grayStack;
+
+  /** The total number of bytes in use by allocated objects */
+  size_t bytesAllocated;
+  /** The threshold that triggers the next collection */
+  size_t nextGC;
 } VM;
 
 /**
