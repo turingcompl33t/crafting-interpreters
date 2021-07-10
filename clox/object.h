@@ -6,17 +6,22 @@
 #define CLOX_OBJECT_H
 
 #include "chunk.h"
+#include "table.h"
 #include "value.h"
 
 #define OBJECT_TYPE(value) (AS_OBJECT(value)->type)
 
+#define IS_CLASS(value)    isObjectType(value, OBJ_CLASS)
 #define IS_CLOSURE(value)  isObjectType(value, OBJ_CLOSURE)
 #define IS_FUNCTION(value) isObjectType(value, OBJ_FUNCTION)
+#define IS_INSTANCE(value) isObjectType(value, OBJ_INSTANCE)
 #define IS_NATIVE(value)   isObjectType(value, OBJ_NATIVE)
 #define IS_STRING(value)   isObjectType(value, OBJ_STRING)
 
+#define AS_CLASS(value)    ((ClassObject*)AS_OBJECT(value))
 #define AS_CLOSURE(value)  ((ClosureObject*)AS_OBJECT(value))
 #define AS_FUNCTION(value) ((FunctionObject*)AS_OBJECT(value))
+#define AS_INSTANCE(value) ((InstanceObject*)AS_OBJECT(value))
 #define AS_NATIVE(value)   (((NativeFnObject*)AS_OBJECT(value))->function)
 #define AS_STRING(value)   ((StringObject*)AS_OBJECT(value))
 #define AS_CSTRING(value)  (((StringObject*)AS_OBJECT(value))->data)
@@ -25,8 +30,10 @@
  * ObjectType enumerates the types of Lox objects.
  */
 typedef enum {
+  OBJ_CLASS,
   OBJ_CLOSURE,
   OBJ_FUNCTION,
+  OBJ_INSTANCE,
   OBJ_NATIVE,
   OBJ_STRING,
   OBJ_UPVALUE
@@ -174,6 +181,42 @@ typedef struct {
  * @return The native function object
  */
 NativeFnObject* newNativeFn(NativeFn function);
+
+/**
+ * The ClassObject type represents a Lox class object.
+ */
+typedef struct {
+  /** The common object header */
+  Object object;
+  /** The name of the class */
+  StringObject* name;
+} ClassObject;
+
+/**
+ * Construct a new class object.
+ * @param name The class name
+ * @return The class object
+ */
+ClassObject* newClass(StringObject* name);
+
+/**
+ * The InstanceObject type represents a Lox class instance
+ */
+typedef struct {
+  /** The common object header */
+  Object object;
+  /** The associated class object */
+  ClassObject* klass;
+  /** The fields of the instance */
+  Table fields;
+} InstanceObject;
+
+/**
+ * Construct a new instance object.
+ * @param klass The associated class object
+ * @return The instance object
+ */
+InstanceObject* newInstance(ClassObject* klass);
 
 /**
  * Determine if the value is an object of the specified type.

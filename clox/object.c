@@ -20,16 +20,8 @@
  * @param size The size of the object
  */
 static void logAllocateObject(Object* object, size_t size) {
-  printf("%p allocate %zu for %s", (void*)object, size, objectTypeString(object->type));
-  switch (object->type) {
-    case OBJ_STRING:
-    case OBJ_CLOSURE:
-    case OBJ_FUNCTION:
-    case OBJ_NATIVE:
-    case OBJ_UPVALUE:
-      break;
-  }
-  printf("\n");
+  printf("%p allocate %zu for %s\n",
+    (void*)object, size, objectTypeString(object->type));
 }
 
 /**
@@ -67,11 +59,17 @@ static void printFunction(FunctionObject* function) {
 
 void printObject(Value value) {
   switch (OBJECT_TYPE(value)) {
+    case OBJ_CLASS:
+      printf("%s", AS_CLASS(value)->name->data);
+      break;
     case OBJ_CLOSURE:
       printFunction(AS_CLOSURE(value)->function);
       break;
     case OBJ_FUNCTION:
       printFunction(AS_FUNCTION(value));
+      break;
+    case OBJ_INSTANCE:
+      printf("%s instance", AS_INSTANCE(value)->klass->name->data);
       break;
     case OBJ_NATIVE:
       printf("<native function>\n");
@@ -210,4 +208,17 @@ NativeFnObject* newNativeFn(NativeFn function) {
   NativeFnObject* native = ALLOCATE_OBJECT(NativeFnObject, OBJ_NATIVE);
   native->function = function;
   return native;
+}
+
+ClassObject* newClass(StringObject* name) {
+  ClassObject* klass = ALLOCATE_OBJECT(ClassObject, OBJ_CLASS);
+  klass->name = name;
+  return klass;
+}
+
+InstanceObject* newInstance(ClassObject* klass) {
+  InstanceObject* instance = ALLOCATE_OBJECT(InstanceObject, OBJ_INSTANCE);
+  instance->klass = klass;
+  initTable(&instance->fields);
+  return instance;
 }

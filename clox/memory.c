@@ -2,6 +2,7 @@
  * @file memory.c 
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "compiler.h"
@@ -9,7 +10,6 @@
 #include "vm.h"
 
 #ifdef DEBUG_LOG_GC
-#include <stdio.h>
 #include "debug.h"
 #endif // DEBUG_LOG_GC
 
@@ -55,6 +55,18 @@ static void logFreeObject(Object* object) {
     case OBJ_STRING: {
       StringObject* string = (StringObject*)object;
       printf(" (%.*s)", string->length, string->data);
+      break;
+    }
+    case OBJ_CLASS: {
+      ClassObject* klass = (ClassObject*)object;
+      printf(" (%.*s)", klass->name->length, klass->name->data);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      InstanceObject* instance = (InstanceObject*)object;
+      printf(" (%.*s instance)",
+        instance->klass->name->length, instance->klass->name->data);
+      break;
     }
     case OBJ_CLOSURE:
     case OBJ_FUNCTION:
@@ -75,6 +87,10 @@ static void freeObject(Object* object) {
 #endif
 
   switch (object->type) {
+    case OBJ_CLASS: {
+      FREE(ClassObject, object);
+      break;
+    }
     case OBJ_CLOSURE: {
       ClosureObject* closure = (ClosureObject*)object;
       // Free the array of upvalues for the closure
@@ -91,6 +107,12 @@ static void freeObject(Object* object) {
       FunctionObject* function = (FunctionObject*)object;
       freeChunk(&function->chunk);
       FREE(FunctionObject, object);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      InstanceObject* instance = (InstanceObject*)object;
+      freeTable(&instance->fields);
+      FREE(InstanceObject, object);
       break;
     }
     case OBJ_NATIVE: {
@@ -168,6 +190,11 @@ static void blackenObject(Object* object) {
 #endif
 
   switch (object->type) {
+    case OBJ_CLASS: {
+      ClassObject* klass = (ClassObject*)object;
+      markObject((Object*)klass->name);
+      break;
+    }
     case OBJ_CLOSURE: {
       ClosureObject* closure = (ClosureObject*)object;
       markObject((Object*)closure->function);
@@ -182,6 +209,12 @@ static void blackenObject(Object* object) {
       markObject((Object*)function->name);
       // Recurse into the function's constant pool
       markArray(&function->chunk.constants);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      InstanceObject* instance = (InstanceObject*)object;
+      markObject((Object*)instance->klass);
+      markForGCTable(&instance->fields);
       break;
     }
     case OBJ_UPVALUE:

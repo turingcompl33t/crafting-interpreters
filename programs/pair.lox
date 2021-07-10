@@ -1,0 +1,7 @@
+// pair.lox
+class Pair {}
+
+var p = Pair();
+p.first = 1;
+p.second = 2;
+print p.first + p.second;

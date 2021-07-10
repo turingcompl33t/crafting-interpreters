@@ -36,6 +36,10 @@ typedef enum {
   OP_GET_UPVALUE,
   OP_SET_UPVALUE,
 
+  /** Instance properties */
+  OP_GET_PROPERTY,
+  OP_SET_PROPERTY,
+
   /** Equality and comparison operators */
   OP_EQUAL,
   OP_GREATER,
@@ -66,6 +70,9 @@ typedef enum {
   
   /** Return from a subroutine */
   OP_RETURN,
+
+  /** Create a class object */
+  OP_CLASS,
 } OpCode;
 
 /**
