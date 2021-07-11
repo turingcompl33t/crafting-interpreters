@@ -11,6 +11,7 @@
 
 #define OBJECT_TYPE(value) (AS_OBJECT(value)->type)
 
+#define IS_BOUND_METHOD    isObjectType(value, OBJ_BOUND_METHOD)
 #define IS_CLASS(value)    isObjectType(value, OBJ_CLASS)
 #define IS_CLOSURE(value)  isObjectType(value, OBJ_CLOSURE)
 #define IS_FUNCTION(value) isObjectType(value, OBJ_FUNCTION)
@@ -18,18 +19,20 @@
 #define IS_NATIVE(value)   isObjectType(value, OBJ_NATIVE)
 #define IS_STRING(value)   isObjectType(value, OBJ_STRING)
 
-#define AS_CLASS(value)    ((ClassObject*)AS_OBJECT(value))
-#define AS_CLOSURE(value)  ((ClosureObject*)AS_OBJECT(value))
-#define AS_FUNCTION(value) ((FunctionObject*)AS_OBJECT(value))
-#define AS_INSTANCE(value) ((InstanceObject*)AS_OBJECT(value))
-#define AS_NATIVE(value)   (((NativeFnObject*)AS_OBJECT(value))->function)
-#define AS_STRING(value)   ((StringObject*)AS_OBJECT(value))
-#define AS_CSTRING(value)  (((StringObject*)AS_OBJECT(value))->data)
+#define AS_BOUND_METHOD(value) ((BoundMethodObject*)AS_OBJECT(value))
+#define AS_CLASS(value)        ((ClassObject*)AS_OBJECT(value))
+#define AS_CLOSURE(value)      ((ClosureObject*)AS_OBJECT(value))
+#define AS_FUNCTION(value)     ((FunctionObject*)AS_OBJECT(value))
+#define AS_INSTANCE(value)     ((InstanceObject*)AS_OBJECT(value))
+#define AS_NATIVE(value)       (((NativeFnObject*)AS_OBJECT(value))->function)
+#define AS_STRING(value)       ((StringObject*)AS_OBJECT(value))
+#define AS_CSTRING(value)      (((StringObject*)AS_OBJECT(value))->data)
 
 /**
  * ObjectType enumerates the types of Lox objects.
  */
 typedef enum {
+  OBJ_BOUND_METHOD,
   OBJ_CLASS,
   OBJ_CLOSURE,
   OBJ_FUNCTION,
@@ -190,6 +193,8 @@ typedef struct {
   Object object;
   /** The name of the class */
   StringObject* name;
+  /** The class methods */
+  Table methods;
 } ClassObject;
 
 /**
@@ -217,6 +222,26 @@ typedef struct {
  * @return The instance object
  */
 InstanceObject* newInstance(ClassObject* klass);
+
+/**
+ * The BoundMethodObject type represents a Lox bound method.
+ */
+typedef struct {
+  /** The common object header */
+  Object object;
+  /** The instance to which the method is bound */
+  Value receiver;
+  /** The bound method */
+  ClosureObject* method;
+} BoundMethodObject;
+
+/**
+ * Construct a new bound method object.
+ * @param receiver The instance to which the method is bound
+ * @param method The bound method
+ * @return The bound method object
+ */
+BoundMethodObject* newBoundMethod(Value receiver, ClosureObject* method);
 
 /**
  * Determine if the value is an object of the specified type.

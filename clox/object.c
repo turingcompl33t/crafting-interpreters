@@ -11,9 +11,7 @@
 #include "value.h"
 #include "vm.h"
 
-#define ALLOCATE_OBJECT(type, objectType) \
-  (type*)allocateObject(sizeof(type), objectType)
-
+#ifdef DEBUG_LOG_GC
 /**
  * Log object allocation event.
  * @param object The object that is allocated
@@ -23,6 +21,11 @@ static void logAllocateObject(Object* object, size_t size) {
   printf("%p allocate %zu for %s\n",
     (void*)object, size, objectTypeString(object->type));
 }
+#endif // DEBUG_LOG_GC
+
+#define ALLOCATE_OBJECT(type, objectType) \
+  (type*)allocateObject(sizeof(type), objectType)
+
 
 /**
  * Allocate an object of the given size on the heap.
@@ -59,6 +62,9 @@ static void printFunction(FunctionObject* function) {
 
 void printObject(Value value) {
   switch (OBJECT_TYPE(value)) {
+    case OBJ_BOUND_METHOD:
+      printFunction(AS_BOUND_METHOD(value)->method->function);
+      break;
     case OBJ_CLASS:
       printf("%s", AS_CLASS(value)->name->data);
       break;
@@ -213,6 +219,7 @@ NativeFnObject* newNativeFn(NativeFn function) {
 ClassObject* newClass(StringObject* name) {
   ClassObject* klass = ALLOCATE_OBJECT(ClassObject, OBJ_CLASS);
   klass->name = name;
+  initTable(&klass->methods);
   return klass;
 }
 
@@ -221,4 +228,11 @@ InstanceObject* newInstance(ClassObject* klass) {
   instance->klass = klass;
   initTable(&instance->fields);
   return instance;
+}
+
+BoundMethodObject* newBoundMethod(Value receiver, ClosureObject* method) {
+  BoundMethodObject* bound = ALLOCATE_OBJECT(BoundMethodObject, OBJ_BOUND_METHOD);
+  bound->receiver = receiver;
+  bound->method = method;
+  return bound;
 }

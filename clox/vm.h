@@ -44,6 +44,8 @@ typedef struct {
   Table globals;
   /** The string-interning table */
   Table strings;
+  /** The special `init` identifier for class initializers */
+  StringObject* initString;
   /** Instrusive linked list of open upvalues */
   UpvalueObject* openUpvalues;
 

@@ -11,6 +11,39 @@
 
 #ifdef DEBUG_LOG_GC
 #include "debug.h"
+
+/**
+ * Log object deallocation event.
+ * @param object The object that is freed
+ */
+static void logFreeObject(Object* object) {
+  printf("%p free type %s", (void*)object, objectTypeString(object->type));
+  switch (object->type) {
+    case OBJ_STRING: {
+      StringObject* string = (StringObject*)object;
+      printf(" (%.*s)", string->length, string->data);
+      break;
+    }
+    case OBJ_CLASS: {
+      ClassObject* klass = (ClassObject*)object;
+      printf(" (%.*s)", klass->name->length, klass->name->data);
+      break;
+    }
+    case OBJ_INSTANCE: {
+      InstanceObject* instance = (InstanceObject*)object;
+      printf(" (%.*s instance)",
+        instance->klass->name->length, instance->klass->name->data);
+      break;
+    }
+    case OBJ_CLOSURE:
+    case OBJ_FUNCTION:
+    case OBJ_NATIVE:
+    case OBJ_UPVALUE:
+    case OBJ_BOUND_METHOD:
+      break;
+  }
+  printf("\n");
+} 
 #endif // DEBUG_LOG_GC
 
 /** The factor by which the heap is expanded or contracted on GC */
@@ -46,38 +79,6 @@ void* reallocate(void* ptr, size_t oldSize, size_t newSize) {
 }
 
 /**
- * Log object deallocation event.
- * @param object The object that is freed
- */
-static void logFreeObject(Object* object) {
-  printf("%p free type %s", (void*)object, objectTypeString(object->type));
-  switch (object->type) {
-    case OBJ_STRING: {
-      StringObject* string = (StringObject*)object;
-      printf(" (%.*s)", string->length, string->data);
-      break;
-    }
-    case OBJ_CLASS: {
-      ClassObject* klass = (ClassObject*)object;
-      printf(" (%.*s)", klass->name->length, klass->name->data);
-      break;
-    }
-    case OBJ_INSTANCE: {
-      InstanceObject* instance = (InstanceObject*)object;
-      printf(" (%.*s instance)",
-        instance->klass->name->length, instance->klass->name->data);
-      break;
-    }
-    case OBJ_CLOSURE:
-    case OBJ_FUNCTION:
-    case OBJ_NATIVE:
-    case OBJ_UPVALUE:
-      break;
-  }
-  printf("\n");
-} 
-
-/**
  * Release the memory used by a single Lox object.
  * @param object A pointer to the object
  */
@@ -87,7 +88,12 @@ static void freeObject(Object* object) {
 #endif
 
   switch (object->type) {
+    case OBJ_BOUND_METHOD:
+      FREE(BoundMethodObject, object);
+      break;
     case OBJ_CLASS: {
+      ClassObject* klass = (ClassObject*)object;
+      freeTable(&klass->methods);
       FREE(ClassObject, object);
       break;
     }
@@ -190,9 +196,16 @@ static void blackenObject(Object* object) {
 #endif
 
   switch (object->type) {
+    case OBJ_BOUND_METHOD: {
+      BoundMethodObject* bound = (BoundMethodObject*)object;
+      markValue(bound->receiver);
+      markObject((Object*)bound->method);
+      break;
+    }
     case OBJ_CLASS: {
       ClassObject* klass = (ClassObject*)object;
       markObject((Object*)klass->name);
+      markForGCTable(&klass->methods);
       break;
     }
     case OBJ_CLOSURE: {
@@ -257,6 +270,7 @@ static void markRoots() {
 
   // Mark the roots accessible only to the compiler
   markCompilerRoots();
+  markObject((Object*)vm.initString);
 }
 
 /**

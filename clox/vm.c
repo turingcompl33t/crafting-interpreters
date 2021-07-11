@@ -14,6 +14,21 @@
 #include "memory.h"
 #include "vm.h"
 
+#ifdef DEBUG_LOG_EXECUTION
+/**
+ * Dump the contents of the runtime stack to standard output.
+ */
+static void dumpStack() {
+  printf("          ");
+  for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
+    printf("[ ");
+    printValue(*slot);
+    printf(" ]");
+  }
+  printf("\n");
+}
+#endif // DEBUG_LOG_EXECUTION
+
 /** The global virtual machine instance */
 VM vm;
 
@@ -34,19 +49,6 @@ static void resetStack() {
   vm.stackTop = vm.stack;
   vm.frameCount = 0;
   vm.openUpvalues = NULL;
-}
-
-/**
- * Dump the contents of the runtime stack to standard output.
- */
-static void dumpStack() {
-  printf("          ");
-  for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
-    printf("[ ");
-    printValue(*slot);
-    printf(" ]");
-  }
-  printf("\n");
 }
 
 /**
@@ -103,6 +105,9 @@ void initVM() {
 
   initTable(&vm.globals);
   initTable(&vm.strings);
+  
+  vm.initString = NULL;
+  vm.initString = copyString("init", 4);
 
   // Define the clock() native function
   defineNative("clock", clockNative);
@@ -111,6 +116,7 @@ void initVM() {
 void freeVM() {
   freeTable(&vm.globals);
   freeTable(&vm.strings);
+  vm.initString = NULL;
   freeObjects();
 }
 
@@ -200,9 +206,21 @@ static bool call(ClosureObject* closure, int argCount) {
 static bool callValue(Value callee, int argCount) {
   if (IS_OBJECT(callee)) {
     switch (OBJECT_TYPE(callee)) {
+      case OBJ_BOUND_METHOD: {
+        BoundMethodObject* bound = AS_BOUND_METHOD(callee);
+        vm.stackTop[-argCount - 1] = bound->receiver;
+        return call(bound->method, argCount);
+      }
       case OBJ_CLASS: {
         ClassObject* klass = AS_CLASS(callee);
         vm.stackTop[-argCount - 1] = OBJECT_VAL(newInstance(klass));
+        Value initializer;
+        if (getTable(&klass->methods, vm.initString, &initializer)) {
+          return call(AS_CLOSURE(initializer), argCount);
+        } else if (argCount != 0) {
+          runtimeError("Expected 0 arguments for initializer but found %d.", argCount);
+          return false;
+        }
         return true;
       }
       case OBJ_CLOSURE:
@@ -220,6 +238,24 @@ static bool callValue(Value callee, int argCount) {
   }
   runtimeError("Invalid call target.");
   return false;
+}
+
+/**
+ * Bind a method to the provided class.
+ * @param klass The class to which the method is bound
+ * @param name The name of the method to bind
+ * @return `true` if binding succeeds, `false` otherwise
+ */
+static bool bindMethod(ClassObject* klass, StringObject* name) {
+  Value method;
+  if (!getTable(&klass->methods, name, &method)) {
+    runtimeError("Undefined property '%s'.", name->data);
+    return false;
+  }
+  BoundMethodObject* bound = newBoundMethod(peek(0), AS_CLOSURE(method));
+  pop();
+  push(OBJECT_VAL(bound));
+  return true;
 }
 
 /**
@@ -265,6 +301,13 @@ static void closeUpvalues(Value* last) {
     upvalue->location = &upvalue->closed;
     vm.openUpvalues = upvalue->next;
   }
+}
+
+static void defineMethod(StringObject* name) {
+  Value method = peek(0);
+  ClassObject* klass = AS_CLASS(peek(1));
+  putTable(&klass->methods, name, method);
+  pop();
 }
 
 /**
@@ -385,8 +428,10 @@ static InterpretResult run() {
           break;
         }
 
-        runtimeError("Undefined property '%s'.", name->data);
-        return INTERPRET_RUNTIME_ERROR;
+        if (!bindMethod(instance->klass, name)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        break;
       }
       case OP_SET_PROPERTY: {
         if (!IS_INSTANCE(peek(1))) {
@@ -521,6 +566,10 @@ static InterpretResult run() {
 
       case OP_CLASS: {
         push(OBJECT_VAL(newClass(READ_STRING())));
+        break;
+      }
+      case OP_METHOD: {
+        defineMethod(READ_STRING());
         break;
       }
     }

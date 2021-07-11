@@ -71,8 +71,9 @@ typedef enum {
   /** Return from a subroutine */
   OP_RETURN,
 
-  /** Create a class object */
+  /** Class declarations */
   OP_CLASS,
+  OP_METHOD,
 } OpCode;
 
 /**
