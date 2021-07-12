@@ -39,6 +39,7 @@ typedef enum {
   /** Instance properties */
   OP_GET_PROPERTY,
   OP_SET_PROPERTY,
+  OP_GET_SUPER,
 
   /** Equality and comparison operators */
   OP_EQUAL,
@@ -66,6 +67,7 @@ typedef enum {
   /** Function calls */
   OP_CALL,
   OP_INVOKE,
+  OP_SUPER_INVOKE,
   
   /** Closure management */
   OP_CLOSURE,
@@ -76,6 +78,7 @@ typedef enum {
 
   /** Class declarations */
   OP_CLASS,
+  OP_INHERIT,
   OP_METHOD,
 } OpCode;
 
