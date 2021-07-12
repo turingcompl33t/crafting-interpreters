@@ -65,6 +65,9 @@ typedef enum {
 
   /** Function calls */
   OP_CALL,
+  OP_INVOKE,
+  
+  /** Closure management */
   OP_CLOSURE,
   OP_CLOSE_UPVALUE,
   

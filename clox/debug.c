@@ -68,6 +68,22 @@ static int jumpInstruction(const char* name, int sign, Chunk* chunk, int offset)
   return offset + 3;
 }
 
+/**
+ * Print an invoke instruction to standard output.
+ * @param name The instruction name
+ * @param chunk The instruction's chunk
+ * @param offset The offset at which the instruction appears in the chunk
+ * @return The updated offset 
+ */
+static int invokeInstruction(const char* name, Chunk* chunk, int offset) {
+  uint8_t constant = chunk->code[offset + 1];
+  uint8_t argCount = chunk->code[offset + 2];
+  printf("%-16s (%d args) %d '", name, argCount, constant);
+  printValue(chunk->constants.values[constant]);
+  printf("'\n");
+  return offset + 3;
+}
+
 // ----------------------------------------------------------------------------
 // Exported
 // ----------------------------------------------------------------------------
@@ -149,6 +165,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
       return jumpInstruction("OP_LOOP", -1, chunk, offset);
     case OP_CALL:
       return byteInstruction("OP_CALL", chunk, offset);
+    case OP_INVOKE:
+      return invokeInstruction("OP_INVOKE", chunk, offset);
     case OP_CLOSURE: {
       offset++;
       uint8_t constant = chunk->code[offset++];

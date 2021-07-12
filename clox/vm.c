@@ -241,6 +241,51 @@ static bool callValue(Value callee, int argCount) {
 }
 
 /**
+ * Invoke a method on a class.
+ * @param klass The class on which the method is invoked
+ * @param name The method name 
+ * @param argCount The method argument count
+ * @return `true` if the invocation succeeds, `false` otherwise
+ */
+static bool invokeFromClass(ClassObject* klass, StringObject* name, int argCount) {
+  Value method;
+  if (!getTable(&klass->methods, name, &method)) {
+    runtimeError("Undefined property '%s'.", name->data);
+    return false;
+  }
+  return call(AS_CLOSURE(method), argCount);
+}
+
+/**
+ * Invoke the method with the specified name on the
+ * instance that appears in the expected location on
+ * the runtime stack (based on the argument count).
+ * @param name The method name
+ * @param argCount The argument count
+ * @return `true` if the invocation succeeds, `false` otherwise
+ */
+static bool invoke(StringObject* name, int argCount) {
+  Value receiver = peek(argCount);
+
+  if (!IS_INSTANCE(receiver)) {
+    runtimeError("Only instances have methods.");
+    return false;
+  }
+
+  InstanceObject* instance = AS_INSTANCE(receiver);
+
+  // Ensure we are not attempting to invoke a field;
+  // if so, fall back to the "slow path"
+  Value value;
+  if (getTable(&instance->fields, name, &value)) {
+    vm.stackTop[-argCount - 1] = value;
+    return callValue(value, argCount);
+  }
+
+  return invokeFromClass(instance->klass, name, argCount);
+}
+
+/**
  * Bind a method to the provided class.
  * @param klass The class to which the method is bound
  * @param name The name of the method to bind
@@ -520,6 +565,16 @@ static InterpretResult run() {
           return INTERPRET_RUNTIME_ERROR;
         }
         // Update the frame to the called function
+        frame = &vm.frames[vm.frameCount - 1];
+        break;
+      }
+      case OP_INVOKE: {
+        StringObject* method = READ_STRING();
+        int argCount = READ_BYTE();
+        if (!invoke(method, argCount)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        // Update the cached frame to the new call frame
         frame = &vm.frames[vm.frameCount - 1];
         break;
       }
