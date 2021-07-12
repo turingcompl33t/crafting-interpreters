@@ -9,6 +9,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** Denotes whether values are represented with tagged unions or NaN boxing */
+#define NAN_BOXING
+
 /** Denotes whether execution tracing is enabled */
 // #define DEBUG_TRACE_EXECUTION
 

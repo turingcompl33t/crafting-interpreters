@@ -23,7 +23,7 @@
  */
 static Entry* findEntry(Entry* entries, int capacity, StringObject* key) {
   // Compute the index at which to begin the search
-  uint32_t index = key->hash % capacity;
+  uint32_t index = key->hash & (capacity - 1);
   // Search linearly from the start index
   Entry* tombstone = NULL;
   for (;;) {
@@ -41,7 +41,7 @@ static Entry* findEntry(Entry* entries, int capacity, StringObject* key) {
       // Found the key of interest
       return entry;
     }
-    index = (index + 1) % capacity;
+    index = (index + 1) & (capacity - 1);
   }
 }
 
@@ -141,7 +141,7 @@ void copyTable(Table* src, Table* dst) {
 StringObject* findStringTable(Table* table, const char* data, int length, uint32_t hash) {
   if (table->count == 0) return NULL;
 
-  uint32_t index = hash % table->capacity;
+  uint32_t index = hash & (table->capacity - 1);
 
   // NOTE: This is the only place in the VM where we
   // actually compare strings for textual equality!
@@ -157,7 +157,7 @@ StringObject* findStringTable(Table* table, const char* data, int length, uint32
       // Found it
       return entry->key;
     }
-    index = (index + 1) % table->capacity;
+    index = (index + 1) & (table->capacity - 1);
   }
 }
 
